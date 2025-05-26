@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,11 +5,12 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Sparkles, Code, BookOpen, ExternalLink, Github } from "lucide-react";
+import { Sparkles, Code, BookOpen } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ProjectCard } from "@/components/ProjectCard";
 import { ProjectDetails } from "@/components/ProjectDetails";
 import { ResearchPaper } from "@/components/ResearchPaper";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Project {
   id: string;
@@ -44,7 +44,6 @@ const ProjectAdvisor = () => {
   const [projectDetails, setProjectDetails] = useState<ProjectDetail | null>(null);
   const [showResearchPaper, setShowResearchPaper] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [apiKey, setApiKey] = useState("");
   const [selectedApi, setSelectedApi] = useState("openai");
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -56,10 +55,10 @@ const ProjectAdvisor = () => {
   };
 
   const generateProjects = async () => {
-    if (!apiKey) {
+    if (!formData.projectType || !formData.interests || !formData.skills) {
       toast({
-        title: "API Key Required",
-        description: "Please enter your API key to generate project suggestions.",
+        title: "Missing Information",
+        description: "Please fill in all required fields to generate project suggestions.",
         variant: "destructive"
       });
       return;
@@ -67,100 +66,30 @@ const ProjectAdvisor = () => {
 
     setLoading(true);
     try {
-      const prompt = `Generate 3 unique project ideas based on these preferences:
-      Project Type: ${formData.projectType}
-      Interests: ${formData.interests}
-      Skills: ${formData.skills}
-      Difficulty: ${formData.difficulty}
-      
-      Return a JSON array with objects containing: id, title, description, difficulty, tags (array), category`;
-
-      let response;
-      
-      if (selectedApi === "openai") {
-        response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [{ role: 'user', content: prompt }],
-            temperature: 0.8,
-          }),
-        });
-      } else if (selectedApi === "claude") {
-        response = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'x-api-key': apiKey,
-            'Content-Type': 'application/json',
-            'anthropic-version': '2023-06-01'
-          },
-          body: JSON.stringify({
-            model: 'claude-3-sonnet-20240229',
-            max_tokens: 1000,
-            messages: [{ role: 'user', content: prompt }],
-          }),
-        });
-      }
-
-      if (response?.ok) {
-        const data = await response.json();
-        let content;
-        
-        if (selectedApi === "openai") {
-          content = data.choices[0].message.content;
-        } else if (selectedApi === "claude") {
-          content = data.content[0].text;
+      const { data, error } = await supabase.functions.invoke('generate-projects', {
+        body: {
+          projectType: formData.projectType,
+          interests: formData.interests,
+          skills: formData.skills,
+          difficulty: formData.difficulty,
+          selectedApi: selectedApi
         }
+      });
 
-        try {
-          const projectsData = JSON.parse(content);
-          setProjects(projectsData);
-          toast({
-            title: "Projects Generated!",
-            description: "Here are your personalized project suggestions.",
-          });
-        } catch {
-          // Fallback mock data if JSON parsing fails
-          const mockProjects = [
-            {
-              id: "1",
-              title: "Personal Finance Tracker",
-              description: "A web application to track expenses, income, and budget planning with data visualization.",
-              difficulty: formData.difficulty as 'Beginner' | 'Intermediate' | 'Advanced',
-              tags: ["React", "Chart.js", "Local Storage"],
-              category: "Web Development"
-            },
-            {
-              id: "2", 
-              title: "Weather Forecast App",
-              description: "Real-time weather application with location-based forecasts and weather alerts.",
-              difficulty: formData.difficulty as 'Beginner' | 'Intermediate' | 'Advanced',
-              tags: ["JavaScript", "API Integration", "Geolocation"],
-              category: "Web Development"
-            },
-            {
-              id: "3",
-              title: "Task Management System",
-              description: "Collaborative task management with team features, deadlines, and progress tracking.",
-              difficulty: formData.difficulty as 'Beginner' | 'Intermediate' | 'Advanced',
-              tags: ["CRUD Operations", "Database", "User Authentication"],
-              category: "Full Stack"
-            }
-          ];
-          setProjects(mockProjects);
-        }
-      } else {
-        throw new Error('API request failed');
+      if (error) throw error;
+
+      if (data?.projects) {
+        setProjects(data.projects);
+        toast({
+          title: "Projects Generated!",
+          description: "Here are your personalized project suggestions.",
+        });
       }
     } catch (error) {
       console.error('Error generating projects:', error);
       toast({
         title: "Error",
-        description: "Failed to generate projects. Please check your API key and try again.",
+        description: "Failed to generate projects. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -173,67 +102,25 @@ const ProjectAdvisor = () => {
     setLoading(true);
     
     try {
-      const detailPrompt = `Provide detailed information for the project "${project.title}":
-      
-      Return JSON with:
-      - title
-      - description (detailed)
-      - structure (project architecture)
-      - flow (user flow/workflow)
-      - roadmap (development phases)
-      - pseudoCode (key algorithms)
-      - resources (array of helpful links)
-      - githubLinks (array of relevant GitHub repositories)`;
-
-      let response;
-      
-      if (selectedApi === "openai") {
-        response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [{ role: 'user', content: detailPrompt }],
-            temperature: 0.7,
-          }),
-        });
-      }
-
-      if (response?.ok) {
-        const data = await response.json();
-        const content = data.choices[0].message.content;
-        
-        try {
-          const details = JSON.parse(content);
-          setProjectDetails(details);
-        } catch {
-          // Fallback mock data
-          setProjectDetails({
-            title: project.title,
-            description: `${project.description} This project involves modern web development practices and user-centered design principles.`,
-            structure: "Frontend: React.js with TypeScript\nBackend: Node.js with Express\nDatabase: MongoDB\nAuthentication: JWT",
-            flow: "1. User Registration/Login\n2. Dashboard Overview\n3. Core Functionality\n4. Data Management\n5. Settings & Profile",
-            roadmap: "Phase 1: Setup & Authentication (Week 1)\nPhase 2: Core Features (Week 2-3)\nPhase 3: UI/UX Polish (Week 4)\nPhase 4: Testing & Deployment (Week 5)",
-            pseudoCode: "// Main Application Logic\nfunction initializeApp() {\n  authenticateUser();\n  loadUserData();\n  renderDashboard();\n}",
-            resources: [
-              "https://reactjs.org/docs",
-              "https://nodejs.org/en/docs",
-              "https://developer.mozilla.org/",
-              "https://stackoverflow.com/"
-            ],
-            githubLinks: [
-              "https://github.com/topics/react",
-              "https://github.com/topics/nodejs",
-              "https://github.com/topics/" + project.category.toLowerCase().replace(' ', '-')
-            ]
-          });
+      const { data, error } = await supabase.functions.invoke('project-details', {
+        body: {
+          project: project,
+          selectedApi: selectedApi
         }
+      });
+
+      if (error) throw error;
+
+      if (data?.details) {
+        setProjectDetails(data.details);
       }
     } catch (error) {
       console.error('Error fetching project details:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load project details. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -304,18 +191,6 @@ const ProjectAdvisor = () => {
             <CardContent className="space-y-6">
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="apiKey" className="text-[#212121] font-medium">API Key *</Label>
-                  <Input
-                    id="apiKey"
-                    type="password"
-                    placeholder="Enter your API key"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    className="border-[#E0E0E0] focus:border-[#4FC3F7]"
-                  />
-                </div>
-
-                <div>
                   <Label className="text-[#212121] font-medium">AI Provider</Label>
                   <RadioGroup value={selectedApi} onValueChange={setSelectedApi}>
                     <div className="flex items-center space-x-2">
@@ -326,11 +201,15 @@ const ProjectAdvisor = () => {
                       <RadioGroupItem value="claude" id="claude" />
                       <Label htmlFor="claude">Claude</Label>
                     </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="gemini" id="gemini" />
+                      <Label htmlFor="gemini">Gemini</Label>
+                    </div>
                   </RadioGroup>
                 </div>
 
                 <div>
-                  <Label htmlFor="projectType" className="text-[#212121] font-medium">Project Type</Label>
+                  <Label htmlFor="projectType" className="text-[#212121] font-medium">Project Type *</Label>
                   <Input
                     id="projectType"
                     name="projectType"
@@ -342,7 +221,7 @@ const ProjectAdvisor = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="interests" className="text-[#212121] font-medium">Interests</Label>
+                  <Label htmlFor="interests" className="text-[#212121] font-medium">Interests *</Label>
                   <Textarea
                     id="interests"
                     name="interests"
@@ -354,7 +233,7 @@ const ProjectAdvisor = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="skills" className="text-[#212121] font-medium">Skills</Label>
+                  <Label htmlFor="skills" className="text-[#212121] font-medium">Skills *</Label>
                   <Textarea
                     id="skills"
                     name="skills"
@@ -385,7 +264,7 @@ const ProjectAdvisor = () => {
 
                 <Button 
                   onClick={generateProjects}
-                  disabled={loading || !apiKey}
+                  disabled={loading}
                   className="w-full bg-[#4FC3F7] hover:bg-[#29B6F6] text-white py-3"
                 >
                   {loading ? "Generating..." : "Generate Project Ideas"}
