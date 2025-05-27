@@ -24,7 +24,7 @@ interface Project {
   created_at: string;
 }
 
-// Updated interface to match the actual database structure
+// Interface matching the actual database structure
 interface ProjectDetail {
   id: string;
   project_id: string;
@@ -51,6 +51,7 @@ const ProjectAdvisor = () => {
   const [loading, setLoading] = useState(false);
   const [selectedApi, setSelectedApi] = useState("openai");
 
+  // Function to handle input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -59,6 +60,7 @@ const ProjectAdvisor = () => {
     }));
   };
 
+  // Function to generate projects
   const generateProjects = async () => {
     if (!formData.projectType || !formData.interests || !formData.skills) {
       toast({
@@ -102,6 +104,7 @@ const ProjectAdvisor = () => {
     }
   };
 
+  // Function to handle project selection
   const handleProjectSelect = async (project: Project) => {
     setSelectedProject(project);
     setLoading(true);
@@ -131,6 +134,7 @@ const ProjectAdvisor = () => {
     }
   };
 
+  // Conditional rendering based on selectedProject and projectDetails
   if (selectedProject && projectDetails) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#F9FBFD] via-[#FFFFFF] to-[#F0F8FF] p-4">
