@@ -1,240 +1,289 @@
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { 
   Sparkles, 
-  FileText, 
+  TrendingUp, 
   BookOpen, 
-  Settings, 
-  LogOut, 
-  Lightbulb, 
-  Code,
+  Target,
   Clock,
-  Trophy,
-  ChevronRight,
-  Menu
+  Star,
+  ArrowRight,
+  User,
+  Code,
+  Lightbulb
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [recentProjects, setRecentProjects] = useState([]);
+  const [savedProjects, setSavedProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const stats = [
-    { label: "Projects Completed", value: 3, icon: Trophy, color: "text-[#A5D6A7]" },
-    { label: "Docs Created", value: 8, icon: FileText, color: "text-[#90CAF9]" },
-    { label: "Hours Saved", value: 24, icon: Clock, color: "text-[#FFE082]" }
-  ];
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      
+      if (user) {
+        // Fetch user's recent projects
+        const { data: projects } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(3);
+        
+        setRecentProjects(projects || []);
+        
+        // Fetch saved projects count
+        const { data: saved } = await supabase
+          .from('saved_projects')
+          .select('*')
+          .eq('user_id', user.id);
+        
+        setSavedProjects(saved || []);
+      }
+      setLoading(false);
+    };
+
+    getUser();
+  }, []);
 
   const quickActions = [
-    { 
-      title: "Get Project Idea", 
-      description: "Discover your next project with AI recommendations", 
-      icon: Lightbulb, 
-      color: "bg-gradient-to-br from-[#FFE082] to-[#FFC107]",
-      href: "/project-recommendations"
+    {
+      title: "Generate New Project",
+      description: "Get AI-powered project suggestions",
+      icon: Sparkles,
+      link: "/project-advisor",
+      color: "bg-[#4FC3F7]"
     },
-    { 
-      title: "Generate SRS", 
-      description: "Create comprehensive software requirement specs", 
-      icon: FileText, 
-      color: "bg-gradient-to-br from-[#90CAF9] to-[#2196F3]",
-      href: "/documentation"
+    {
+      title: "Browse Ideas",
+      description: "Explore curated project recommendations",
+      icon: Lightbulb,
+      link: "/project-recommendations",
+      color: "bg-[#FFE082]"
     },
-    { 
-      title: "My Saved Projects", 
-      description: "View and manage your project collection", 
-      icon: Code, 
-      color: "bg-gradient-to-br from-[#A5D6A7] to-[#4CAF50]",
-      href: "/saved-projects"
+    {
+      title: "Create Documentation",
+      description: "Generate comprehensive project docs",
+      icon: BookOpen,
+      link: "/documentation",
+      color: "bg-[#A5D6A7]"
+    },
+    {
+      title: "Learning Resources",
+      description: "Access tutorials and guides",
+      icon: Code,
+      link: "/resources",
+      color: "bg-[#CE93D8]"
     }
   ];
 
-  const recentProjects = [
-    { name: "E-commerce Mobile App", status: "In Progress", lastUpdated: "2 hours ago" },
-    { name: "Weather Dashboard", status: "Documentation Ready", lastUpdated: "1 day ago" },
-    { name: "Task Management System", status: "Completed", lastUpdated: "3 days ago" }
+  const stats = [
+    {
+      title: "Generated Projects",
+      value: recentProjects.length,
+      icon: Target,
+      color: "text-[#4FC3F7]"
+    },
+    {
+      title: "Saved Projects",
+      value: savedProjects.length,
+      icon: Star,
+      color: "text-[#FFB74D]"
+    },
+    {
+      title: "Learning Progress",
+      value: "75%",
+      icon: TrendingUp,
+      color: "text-[#81C784]"
+    },
+    {
+      title: "Time Saved",
+      value: "24h",
+      icon: Clock,
+      color: "text-[#BA68C8]"
+    }
   ];
 
-  const sidebarItems = [
-    { name: "Dashboard", icon: Sparkles, href: "/dashboard", active: true },
-    { name: "Project Ideas", icon: Lightbulb, href: "/project-recommendations" },
-    { name: "Documentation", icon: FileText, href: "/documentation" },
-    { name: "Resources", icon: BookOpen, href: "/resources" },
-    { name: "Saved Projects", icon: Code, href: "/saved-projects" },
-    { name: "Settings", icon: Settings, href: "/settings" }
-  ];
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F9FBFD] via-[#FFFFFF] to-[#F0F8FF] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#4FC3F7]"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F9FBFD] via-[#FFFFFF] to-[#F0F8FF]">
-      <div className="flex">
-        {/* Sidebar */}
-        <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
-          <div className="flex items-center justify-between p-6 border-b border-[#E0E0E0]">
-            <div className="flex items-center space-x-2">
-              <Sparkles className="w-8 h-8 text-[#4FC3F7]" />
-              <span className="text-xl font-bold text-[#212121]">Dev Genie</span>
+    <div className="min-h-screen bg-gradient-to-br from-[#F9FBFD] via-[#FFFFFF] to-[#F0F8FF] p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Welcome Section */}
+        <div className="mb-8">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="bg-gradient-to-br from-[#4FC3F7] to-[#29B6F6] p-3 rounded-lg">
+              <User className="w-8 h-8 text-white" />
             </div>
-          </div>
-          
-          <nav className="mt-6">
-            {sidebarItems.map((item) => (
-              <Link
-                key={item.name}
-                to={item.href}
-                className={`flex items-center px-6 py-3 text-left hover:bg-[#E3F2FD] transition-colors ${
-                  item.active ? 'bg-[#E3F2FD] border-r-4 border-[#4FC3F7] text-[#4FC3F7]' : 'text-[#616161]'
-                }`}
-              >
-                <item.icon className="w-5 h-5 mr-3" />
-                {item.name}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="absolute bottom-6 left-6 right-6">
-            <Button variant="ghost" className="w-full justify-start text-[#616161] hover:text-[#212121]">
-              <LogOut className="w-5 h-5 mr-3" />
-              Logout
-            </Button>
+            <div>
+              <h1 className="text-4xl font-bold text-[#212121]">
+                Welcome back{user?.email ? `, ${user.email.split('@')[0]}` : ''}!
+              </h1>
+              <p className="text-lg text-[#616161]">Ready to build something amazing today?</p>
+            </div>
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 lg:ml-0">
-          {/* Header */}
-          <header className="bg-white shadow-sm border-b border-[#E0E0E0] px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="lg:hidden"
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
-                >
-                  <Menu className="w-6 h-6" />
-                </Button>
-                <div>
-                  <h1 className="text-2xl font-bold text-[#212121]">Dashboard</h1>
-                  <p className="text-[#616161]">Welcome back! Ready to build something amazing?</p>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {stats.map((stat, index) => (
+            <Card key={index} className="border-[#E0E0E0] shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-[#616161] mb-1">{stat.title}</p>
+                    <p className="text-2xl font-bold text-[#212121]">{stat.value}</p>
+                  </div>
+                  <stat.icon className={`w-8 h-8 ${stat.color}`} />
                 </div>
-              </div>
-              
-              <div className="flex items-center space-x-4">
-                <Avatar>
-                  <AvatarFallback className="bg-[#4FC3F7] text-white">SW</AvatarFallback>
-                </Avatar>
-                <div className="hidden md:block">
-                  <p className="font-medium text-[#212121]">Swati Sharma</p>
-                  <p className="text-sm text-[#616161]">Computer Science Student</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Quick Actions */}
+          <div className="lg:col-span-2">
+            <Card className="border-[#E0E0E0] shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-2xl text-[#212121]">Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {quickActions.map((action, index) => (
+                    <Link key={index} to={action.link}>
+                      <Card className="border-[#E0E0E0] hover:shadow-lg transition-all duration-300 cursor-pointer group">
+                        <CardContent className="p-4">
+                          <div className="flex items-start space-x-3">
+                            <div className={`${action.color} p-2 rounded-lg group-hover:scale-110 transition-transform`}>
+                              <action.icon className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-[#212121] group-hover:text-[#4FC3F7] transition-colors">
+                                {action.title}
+                              </h3>
+                              <p className="text-sm text-[#616161] mt-1">{action.description}</p>
+                            </div>
+                            <ArrowRight className="w-4 h-4 text-[#616161] group-hover:text-[#4FC3F7] transition-colors" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ))}
                 </div>
-              </div>
-            </div>
-          </header>
-
-          {/* Dashboard Content */}
-          <main className="p-6">
-            {/* Welcome Section */}
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-[#212121] mb-2">
-                Hi Swati 👋 Ready to build your next big idea?
-              </h2>
-              <p className="text-lg text-[#616161]">
-                Let's continue your development journey with personalized recommendations and tools.
-              </p>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="grid md:grid-cols-3 gap-6 mb-8">
-              {stats.map((stat, index) => (
-                <Card key={index} className="border-[#E0E0E0] shadow-lg hover:shadow-xl transition-all duration-300">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-[#616161] mb-1">{stat.label}</p>
-                        <p className="text-3xl font-bold text-[#212121]">{stat.value}</p>
-                      </div>
-                      <div className={`p-3 rounded-lg bg-gradient-to-br from-white to-gray-50`}>
-                        <stat.icon className={`w-8 h-8 ${stat.color}`} />
-                      </div>
-                    </div>
-                    <div className="mt-4">
-                      <Progress value={75} className="h-2" />
-                      <p className="text-xs text-[#616161] mt-2">+12% from last month</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {/* Quick Actions */}
-            <div className="mb-8">
-              <h3 className="text-2xl font-bold text-[#212121] mb-6">Quick Actions</h3>
-              <div className="grid md:grid-cols-3 gap-6">
-                {quickActions.map((action, index) => (
-                  <Link key={index} to={action.href}>
-                    <Card className="border-[#E0E0E0] shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group">
-                      <CardContent className="p-6">
-                        <div className={`w-12 h-12 rounded-lg ${action.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                          <action.icon className="w-6 h-6 text-white" />
-                        </div>
-                        <h4 className="text-xl font-semibold text-[#212121] mb-2">{action.title}</h4>
-                        <p className="text-[#616161] mb-4">{action.description}</p>
-                        <div className="flex items-center text-[#4FC3F7] font-medium">
-                          <span>Get Started</span>
-                          <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform duration-300" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
             {/* Recent Projects */}
-            <div>
-              <h3 className="text-2xl font-bold text-[#212121] mb-6">Recent Projects</h3>
-              <Card className="border-[#E0E0E0] shadow-lg">
-                <CardHeader>
-                  <CardTitle className="text-lg text-[#212121]">Your Latest Work</CardTitle>
-                </CardHeader>
-                <CardContent>
+            <Card className="border-[#E0E0E0] shadow-lg mt-6">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-2xl text-[#212121]">Recent Projects</CardTitle>
+                  <Link to="/project-advisor">
+                    <Button variant="outline" className="border-[#90CAF9] text-[#4FC3F7] hover:bg-[#E3F2FD]">
+                      View All
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {recentProjects.length > 0 ? (
                   <div className="space-y-4">
-                    {recentProjects.map((project, index) => (
-                      <div key={index} className="flex items-center justify-between p-4 border border-[#E0E0E0] rounded-lg hover:bg-[#F9FBFD] transition-colors">
+                    {recentProjects.map((project: any) => (
+                      <div key={project.id} className="flex items-center justify-between p-4 bg-[#F5F5F5] rounded-lg">
                         <div>
-                          <h4 className="font-semibold text-[#212121]">{project.name}</h4>
-                          <p className="text-[#616161] text-sm">{project.lastUpdated}</p>
+                          <h3 className="font-semibold text-[#212121]">{project.title}</h3>
+                          <p className="text-sm text-[#616161] mt-1">{project.description.substring(0, 100)}...</p>
+                          <div className="flex items-center space-x-2 mt-2">
+                            <Badge variant="outline" className="border-[#90CAF9] text-[#4FC3F7]">
+                              {project.difficulty}
+                            </Badge>
+                            <Badge variant="outline" className="border-[#90CAF9] text-[#4FC3F7]">
+                              {project.category}
+                            </Badge>
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-3">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            project.status === 'Completed' ? 'bg-[#A5D6A7] text-green-800' :
-                            project.status === 'In Progress' ? 'bg-[#FFE082] text-yellow-800' :
-                            'bg-[#90CAF9] text-blue-800'
-                          }`}>
-                            {project.status}
-                          </span>
-                          <ChevronRight className="w-5 h-5 text-[#616161]" />
-                        </div>
+                        <Button variant="outline" size="sm">View</Button>
                       </div>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          </main>
+                ) : (
+                  <div className="text-center py-8">
+                    <Sparkles className="w-12 h-12 text-[#90CAF9] mx-auto mb-4" />
+                    <p className="text-[#616161]">No projects yet. Generate your first project!</p>
+                    <Link to="/project-advisor">
+                      <Button className="mt-4 bg-[#4FC3F7] hover:bg-[#29B6F6] text-white">
+                        Get Started
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Progress Card */}
+            <Card className="border-[#E0E0E0] shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-xl text-[#212121]">Your Progress</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-[#616161]">Projects Generated</span>
+                      <span className="text-[#212121]">{recentProjects.length}/10</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-[#4FC3F7] h-2 rounded-full transition-all duration-300" 
+                        style={{ width: `${Math.min((recentProjects.length / 10) * 100, 100)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-[#616161]">Learning Path</span>
+                      <span className="text-[#212121]">75%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="bg-[#81C784] h-2 rounded-full w-3/4 transition-all duration-300"></div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tips Card */}
+            <Card className="border-[#E0E0E0] shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-xl text-[#212121]">💡 Pro Tip</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-[#616161] text-sm leading-relaxed">
+                  Start with beginner projects and gradually increase difficulty. This helps build confidence and ensures steady progress in your learning journey.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
-
-      {/* Sidebar Overlay for Mobile */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
     </div>
   );
 };

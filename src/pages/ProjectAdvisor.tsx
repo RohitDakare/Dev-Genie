@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +25,7 @@ interface Project {
   created_at: string;
 }
 
-// Interface matching the actual database structure
+// Interface exactly matching the database structure
 interface ProjectDetail {
   id: string;
   project_id: string;
@@ -51,7 +52,6 @@ const ProjectAdvisor = () => {
   const [loading, setLoading] = useState(false);
   const [selectedApi, setSelectedApi] = useState("openai");
 
-  // Function to handle input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -60,7 +60,6 @@ const ProjectAdvisor = () => {
     }));
   };
 
-  // Function to generate projects
   const generateProjects = async () => {
     if (!formData.projectType || !formData.interests || !formData.skills) {
       toast({
@@ -104,7 +103,6 @@ const ProjectAdvisor = () => {
     }
   };
 
-  // Function to handle project selection
   const handleProjectSelect = async (project: Project) => {
     setSelectedProject(project);
     setLoading(true);
@@ -134,7 +132,6 @@ const ProjectAdvisor = () => {
     }
   };
 
-  // Conditional rendering based on selectedProject and projectDetails
   if (selectedProject && projectDetails) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#F9FBFD] via-[#FFFFFF] to-[#F0F8FF] p-4">
@@ -192,7 +189,6 @@ const ProjectAdvisor = () => {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Input Form */}
           <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
             <CardHeader>
               <CardTitle className="text-2xl text-[#212121]">Tell us about your preferences</CardTitle>
@@ -283,7 +279,6 @@ const ProjectAdvisor = () => {
             </CardContent>
           </Card>
 
-          {/* Project Suggestions */}
           <div className="space-y-6">
             {projects.length > 0 && (
               <div>
