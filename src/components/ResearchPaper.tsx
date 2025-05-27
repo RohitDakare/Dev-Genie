@@ -1,7 +1,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileText } from "lucide-react";
+import { Download, Copy, CheckCircle } from "lucide-react";
+import { useState } from "react";
+import { toast } from "@/hooks/use-toast";
 
 interface Project {
   id: string;
@@ -10,9 +12,13 @@ interface Project {
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
   tags: string[];
   category: string;
+  user_id: string;
+  api_source: string;
+  created_at: string;
 }
 
 interface ProjectDetail {
+  id: string;
   title: string;
   description: string;
   structure: string;
@@ -21,6 +27,8 @@ interface ProjectDetail {
   pseudoCode: string;
   resources: string[];
   githubLinks: string[];
+  project_id: string;
+  created_at: string;
 }
 
 interface ResearchPaperProps {
@@ -29,281 +37,192 @@ interface ResearchPaperProps {
 }
 
 export const ResearchPaper = ({ project, details }: ResearchPaperProps) => {
-  const generatePaperContent = () => {
+  const [copied, setCopied] = useState(false);
+
+  const generateResearchPaper = () => {
+    const currentDate = new Date().toLocaleDateString();
+    
     return `
-${details.title.toUpperCase()}
+# ${details.title}
+## A Comprehensive Project Research Paper
 
-Author Name
-Your Institution/College/Organization Name
-your.email@example.com
+**Author:** AI Project Advisor  
+**Date:** ${currentDate}  
+**Category:** ${project.category}  
+**Difficulty Level:** ${project.difficulty}  
 
-ABSTRACT
+---
 
-This paper presents the development and implementation of ${details.title}, a ${project.category.toLowerCase()} solution designed to address specific challenges in the domain. The project utilizes modern ${project.tags.join(', ')} technologies to create an efficient and user-friendly system. The methodology involves systematic analysis, design, and implementation phases, resulting in a robust application that demonstrates practical utility and scalability. Key findings indicate successful implementation of core functionalities with potential for future enhancements and broader applications.
+## Abstract
 
-KEYWORDS
+${details.description}
 
-${project.tags.join(', ')}, Software Development, ${project.category}, User Experience, System Design
+This research paper provides a comprehensive analysis and implementation guide for the ${details.title} project. The document covers project structure, development methodology, implementation roadmap, and technical specifications to ensure successful project completion.
 
-I. INTRODUCTION
+---
 
-The rapid advancement in technology has created numerous opportunities for innovative solutions in various domains. This paper introduces ${details.title}, a comprehensive ${project.category.toLowerCase()} application that addresses the growing need for efficient and user-friendly systems in the digital landscape.
+## 1. Introduction
 
-The significance of this study lies in its practical approach to solving real-world problems through technology. With the increasing demand for digital solutions, this project contributes to the body of knowledge by demonstrating effective implementation strategies and best practices.
+### 1.1 Project Overview
+${details.description}
 
-1.1 Project Aims and Objectives
+### 1.2 Project Classification
+- **Category:** ${project.category}
+- **Difficulty Level:** ${project.difficulty}
+- **Tags:** ${project.tags ? project.tags.join(', ') : 'N/A'}
 
-The primary objectives of this project include:
-• Developing a functional and intuitive ${project.category.toLowerCase()} application
-• Implementing modern development practices and technologies
-• Creating a scalable and maintainable system architecture
-• Demonstrating practical problem-solving through technology
-• Providing a foundation for future enhancements and features
+### 1.3 Objectives
+The primary objective of this project is to create a functional ${project.category.toLowerCase()} application that demonstrates proficiency in relevant technologies and software development practices.
 
-II. METHODOLOGY
+---
 
-The development of ${details.title} follows a systematic approach combining traditional software development methodologies with modern agile practices.
+## 2. Methodology
 
-2.1 System Analysis / Research Design
+### 2.1 Development Approach
+${details.flow || 'Standard software development lifecycle approach with iterative development and continuous testing.'}
 
-The current scenario analysis revealed the need for a comprehensive solution that addresses specific user requirements while maintaining high standards of usability and performance. The proposed solution leverages ${project.tags.slice(0, 3).join(', ')} to create an efficient and scalable system.
+### 2.2 Project Structure
+\`\`\`
+${details.structure || 'Project structure will be defined based on chosen technology stack and requirements.'}
+\`\`\`
 
-Comparative analysis with existing solutions highlighted key areas for improvement, including user experience, performance optimization, and feature comprehensiveness.
+---
 
-2.1.1 Software and Hardware Requirements
+## 3. Implementation Plan
 
-Software Requirements:
-${details.structure}
+### 3.1 Development Roadmap
+${details.roadmap || 'A systematic approach to building the project with clear milestones and deliverables.'}
 
-Hardware Requirements:
-• Processor: Intel i5 or equivalent (minimum)
-• Memory: 8GB RAM (recommended 16GB)
-• Storage: 500MB available space
-• Network: Stable internet connection for API integrations
+### 3.2 Technical Specifications
+${details.pseudoCode || 'Technical implementation details will be defined during the development phase.'}
 
-2.2 System Implementation
+---
 
-The implementation follows a modular approach, ensuring maintainability and scalability:
+## 4. Resources and References
 
-${details.flow}
+### 4.1 Learning Resources
+${details.resources && details.resources.length > 0 
+  ? details.resources.map((resource, index) => `${index + 1}. ${resource}`).join('\n')
+  : 'Additional learning resources will be provided based on project requirements.'
+}
 
-III. MODULE DESCRIPTION / SYSTEM ARCHITECTURE
+### 4.2 Code References
+${details.githubLinks && details.githubLinks.length > 0 
+  ? details.githubLinks.map((link, index) => `${index + 1}. ${link}`).join('\n')
+  : 'Relevant code repositories and examples will be identified during development.'
+}
 
-The system is designed with a modular architecture to ensure scalability and maintainability:
+---
 
-3.1 Frontend Module
-Responsible for user interface and user experience, implementing responsive design principles and modern UI/UX patterns.
+## 5. Conclusion
 
-3.2 Backend Module  
-Handles business logic, data processing, and API integrations, ensuring secure and efficient data management.
+This project represents an excellent opportunity to develop practical skills in ${project.category.toLowerCase()} development. The structured approach outlined in this document provides a clear path from conception to completion, ensuring that all aspects of the project are thoroughly planned and executed.
 
-3.3 Database Module
-Manages data storage, retrieval, and integrity, implementing appropriate data models and relationships.
+The combination of theoretical understanding and practical implementation will result in a portfolio-worthy project that demonstrates technical competency and problem-solving abilities.
 
-3.4 Integration Module
-Facilitates communication between different system components and external services.
+---
 
-IV. TESTING AND RESULTS / EXPERIMENTAL ANALYSIS
+## 6. Timeline and Milestones
 
-The testing process involved comprehensive evaluation of system functionality and performance:
+### Phase 1: Planning and Setup (Week 1)
+- Environment setup
+- Technology stack finalization
+- Initial project structure creation
 
-Unit Testing:
-• Individual component testing with 95% code coverage
-• Function-level validation and error handling
+### Phase 2: Core Development (Weeks 2-4)
+- Implementation of core features
+- Basic functionality development
+- Initial testing and debugging
 
-Integration Testing:
-• End-to-end workflow testing
-• API integration verification
-• Cross-browser compatibility testing
+### Phase 3: Advanced Features (Weeks 5-6)
+- Advanced feature implementation
+- Performance optimization
+- User experience enhancements
 
-Performance Metrics:
-• Load time: <3 seconds for all pages
-• Response time: <1 second for API calls
-• User satisfaction: 4.5/5 based on initial feedback
+### Phase 4: Testing and Deployment (Week 7)
+- Comprehensive testing
+- Documentation completion
+- Deployment and final review
 
-V. FUTURE SCOPE
+---
 
-The current implementation provides a solid foundation for future enhancements:
-
-• Integration with additional third-party services
-• Implementation of advanced analytics and reporting
-• Mobile application development
-• Machine learning integration for enhanced functionality
-• Scalability improvements for enterprise deployment
-
-VI. CONCLUSION
-
-The successful development and implementation of ${details.title} demonstrates the effective application of modern ${project.category.toLowerCase()} development practices. The project achieves its primary objectives of creating a functional, scalable, and user-friendly system.
-
-Key accomplishments include:
-• Successful implementation of core functionalities
-• Demonstration of modern development practices
-• Creation of a maintainable and scalable architecture
-• Positive user feedback and system performance
-
-The project contributes valuable insights to the field of ${project.category.toLowerCase()} development and provides a foundation for future research and development efforts.
-
-VII. REFERENCES
-
-[1] Documentation and Official Guides for ${project.tags[0] || 'Technology Stack'}
-[2] Best Practices in ${project.category} Development
-[3] User Experience Design Principles and Guidelines
-[4] Software Architecture Patterns and Practices
-[5] Modern Development Methodologies and Frameworks
-    `.trim();
+**Generated by AI Project Advisor**  
+**Document Version:** 1.0  
+**Last Updated:** ${currentDate}
+`;
   };
 
   const downloadPaper = () => {
-    const content = generatePaperContent();
-    const blob = new Blob([content], { type: 'text/plain' });
+    const paper = generateResearchPaper();
+    const blob = new Blob([paper], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${details.title.replace(/\s+/g, '_')}_Research_Paper.txt`;
+    a.download = `${details.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_research_paper.md`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Downloaded!",
+      description: "Research paper has been downloaded as a Markdown file.",
+    });
+  };
+
+  const copyPaper = async () => {
+    try {
+      const paper = generateResearchPaper();
+      await navigator.clipboard.writeText(paper);
+      setCopied(true);
+      toast({
+        title: "Copied!",
+        description: "Research paper copied to clipboard.",
+      });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      toast({
+        title: "Copy failed",
+        description: "Failed to copy to clipboard.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center space-x-2">
-          <FileText className="w-6 h-6 text-[#4FC3F7]" />
-          <h2 className="text-2xl font-bold text-[#212121]">Research Paper Template</h2>
-        </div>
-        <Button onClick={downloadPaper} className="bg-[#4FC3F7] hover:bg-[#29B6F6] text-white">
-          <Download className="w-4 h-4 mr-2" />
-          Download Paper
-        </Button>
-      </div>
-
-      <Card className="shadow-xl border-0 bg-white/90">
+      <Card className="shadow-lg border-0 bg-white/90 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="text-center text-2xl text-[#212121]">
-            {details.title.toUpperCase()}
-          </CardTitle>
-          <div className="text-center text-[#616161] space-y-1">
-            <p>Author Name</p>
-            <p>Your Institution/College/Organization Name</p>
-            <p>your.email@example.com</p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+            <CardTitle className="text-xl sm:text-2xl text-[#212121]">Research Paper</CardTitle>
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+              <Button
+                onClick={copyPaper}
+                variant="outline"
+                className="w-full sm:w-auto"
+              >
+                {copied ? (
+                  <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                ) : (
+                  <Copy className="w-4 h-4 mr-2" />
+                )}
+                Copy
+              </Button>
+              <Button
+                onClick={downloadPaper}
+                className="w-full sm:w-auto bg-[#4FC3F7] hover:bg-[#29B6F6] text-white"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download
+              </Button>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-8">
-          <div>
-            <h3 className="text-lg font-bold text-[#212121] mb-3">ABSTRACT</h3>
-            <p className="text-[#616161] leading-relaxed text-justify">
-              This paper presents the development and implementation of {details.title}, a {project.category.toLowerCase()} solution designed to address specific challenges in the domain. The project utilizes modern {project.tags.join(', ')} technologies to create an efficient and user-friendly system. The methodology involves systematic analysis, design, and implementation phases, resulting in a robust application that demonstrates practical utility and scalability.
-            </p>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-bold text-[#212121] mb-3">KEYWORDS</h3>
-            <p className="text-[#616161]">{project.tags.join(', ')}, Software Development, {project.category}, User Experience, System Design</p>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-bold text-[#212121] mb-3">I. INTRODUCTION</h3>
-            <p className="text-[#616161] leading-relaxed text-justify mb-4">
-              The rapid advancement in technology has created numerous opportunities for innovative solutions in various domains. This paper introduces {details.title}, a comprehensive {project.category.toLowerCase()} application that addresses the growing need for efficient and user-friendly systems in the digital landscape.
-            </p>
-            
-            <h4 className="text-md font-semibold text-[#212121] mb-2">1.1 Project Aims and Objectives</h4>
-            <ul className="text-[#616161] space-y-1 ml-4">
-              <li>• Developing a functional and intuitive {project.category.toLowerCase()} application</li>
-              <li>• Implementing modern development practices and technologies</li>
-              <li>• Creating a scalable and maintainable system architecture</li>
-              <li>• Demonstrating practical problem-solving through technology</li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-bold text-[#212121] mb-3">II. METHODOLOGY</h3>
-            <p className="text-[#616161] leading-relaxed text-justify mb-4">
-              The development of {details.title} follows a systematic approach combining traditional software development methodologies with modern agile practices.
-            </p>
-
-            <h4 className="text-md font-semibold text-[#212121] mb-2">2.1 System Analysis / Research Design</h4>
-            <p className="text-[#616161] leading-relaxed text-justify mb-4">
-              The current scenario analysis revealed the need for a comprehensive solution that addresses specific user requirements while maintaining high standards of usability and performance.
-            </p>
-
-            <h4 className="text-md font-semibold text-[#212121] mb-2">2.1.1 Software and Hardware Requirements</h4>
-            <div className="bg-[#F5F5F5] p-4 rounded-lg">
-              <p className="text-[#212121] font-medium mb-2">Software Requirements:</p>
-              <pre className="text-sm text-[#616161] whitespace-pre-wrap">{details.structure}</pre>
-            </div>
-
-            <h4 className="text-md font-semibold text-[#212121] mb-2 mt-4">2.2 System Implementation</h4>
-            <div className="bg-[#F5F5F5] p-4 rounded-lg">
-              <pre className="text-sm text-[#616161] whitespace-pre-wrap">{details.flow}</pre>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-bold text-[#212121] mb-3">III. MODULE DESCRIPTION / SYSTEM ARCHITECTURE</h3>
-            <div className="space-y-3">
-              <div>
-                <h4 className="text-md font-semibold text-[#212121]">3.1 Frontend Module</h4>
-                <p className="text-[#616161]">Responsible for user interface and user experience, implementing responsive design principles.</p>
-              </div>
-              <div>
-                <h4 className="text-md font-semibold text-[#212121]">3.2 Backend Module</h4>
-                <p className="text-[#616161]">Handles business logic, data processing, and API integrations.</p>
-              </div>
-              <div>
-                <h4 className="text-md font-semibold text-[#212121]">3.3 Database Module</h4>
-                <p className="text-[#616161]">Manages data storage, retrieval, and integrity.</p>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-bold text-[#212121] mb-3">IV. TESTING AND RESULTS</h3>
-            <div className="space-y-3">
-              <div>
-                <h4 className="text-md font-semibold text-[#212121]">Unit Testing:</h4>
-                <p className="text-[#616161]">Individual component testing with comprehensive validation and error handling.</p>
-              </div>
-              <div>
-                <h4 className="text-md font-semibold text-[#212121]">Integration Testing:</h4>
-                <p className="text-[#616161]">End-to-end workflow testing and API integration verification.</p>
-              </div>
-              <div>
-                <h4 className="text-md font-semibold text-[#212121]">Performance Metrics:</h4>
-                <p className="text-[#616161]">Load time optimization and response time analysis.</p>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-bold text-[#212121] mb-3">V. FUTURE SCOPE</h3>
-            <ul className="text-[#616161] space-y-1 ml-4">
-              <li>• Integration with additional third-party services</li>
-              <li>• Implementation of advanced analytics and reporting</li>
-              <li>• Mobile application development</li>
-              <li>• Machine learning integration for enhanced functionality</li>
-              <li>• Scalability improvements for enterprise deployment</li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-bold text-[#212121] mb-3">VI. CONCLUSION</h3>
-            <p className="text-[#616161] leading-relaxed text-justify">
-              The successful development and implementation of {details.title} demonstrates the effective application of modern {project.category.toLowerCase()} development practices. The project achieves its primary objectives of creating a functional, scalable, and user-friendly system while contributing valuable insights to the field of software development.
-            </p>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-bold text-[#212121] mb-3">VII. REFERENCES</h3>
-            <ol className="text-[#616161] space-y-1 ml-4">
-              <li>[1] Documentation and Official Guides for {project.tags[0] || 'Technology Stack'}</li>
-              <li>[2] Best Practices in {project.category} Development</li>
-              <li>[3] User Experience Design Principles and Guidelines</li>
-              <li>[4] Software Architecture Patterns and Practices</li>
-              <li>[5] Modern Development Methodologies and Frameworks</li>
-            </ol>
+        <CardContent>
+          <div className="bg-[#F9F9F9] p-4 sm:p-6 rounded-lg max-h-[70vh] overflow-y-auto">
+            <pre className="whitespace-pre-wrap text-sm leading-relaxed text-[#212121] font-mono">
+              {generateResearchPaper()}
+            </pre>
           </div>
         </CardContent>
       </Card>

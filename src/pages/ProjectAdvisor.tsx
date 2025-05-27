@@ -25,16 +25,18 @@ interface Project {
   created_at: string;
 }
 
-// Interface matching the database structure exactly
+// Fixed interface to match what's expected by the components
 interface ProjectDetail {
   id: string;
-  project_id: string;
+  title: string;
+  description: string;
   structure: string;
   flow: string;
   roadmap: string;
-  pseudo_code: string;
+  pseudoCode: string;
   resources: string[];
-  github_links: string[];
+  githubLinks: string[];
+  project_id: string;
   created_at: string;
 }
 
@@ -118,7 +120,21 @@ const ProjectAdvisor = () => {
       if (error) throw error;
 
       if (data?.details) {
-        setProjectDetails(data.details);
+        // Transform the database response to match our interface
+        const transformedDetails: ProjectDetail = {
+          id: data.details.id,
+          title: project.title,
+          description: project.description,
+          structure: data.details.structure || '',
+          flow: data.details.flow || '',
+          roadmap: data.details.roadmap || '',
+          pseudoCode: data.details.pseudo_code || '',
+          resources: data.details.resources || [],
+          githubLinks: data.details.github_links || [],
+          project_id: data.details.project_id,
+          created_at: data.details.created_at
+        };
+        setProjectDetails(transformedDetails);
       }
     } catch (error) {
       console.error('Error fetching project details:', error);
@@ -136,7 +152,7 @@ const ProjectAdvisor = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#F9FBFD] via-[#FFFFFF] to-[#F0F8FF] p-4">
         <div className="max-w-6xl mx-auto">
-          <div className="flex items-center space-x-4 mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 mb-6">
             <Button 
               onClick={() => {
                 setSelectedProject(null);
@@ -144,16 +160,18 @@ const ProjectAdvisor = () => {
                 setShowResearchPaper(false);
               }}
               variant="outline"
+              className="w-full sm:w-auto"
             >
               ← Back to Projects
             </Button>
-            <h1 className="text-3xl font-bold text-[#212121]">Project Details</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-[#212121]">Project Details</h1>
           </div>
 
-          <div className="flex space-x-4 mb-6">
+          <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 mb-6">
             <Button 
               onClick={() => setShowResearchPaper(false)}
               variant={!showResearchPaper ? "default" : "outline"}
+              className="w-full sm:w-auto"
             >
               <Code className="w-4 h-4 mr-2" />
               Project Details
@@ -161,6 +179,7 @@ const ProjectAdvisor = () => {
             <Button 
               onClick={() => setShowResearchPaper(true)}
               variant={showResearchPaper ? "default" : "outline"}
+              className="w-full sm:w-auto"
             >
               <BookOpen className="w-4 h-4 mr-2" />
               Research Paper
@@ -182,22 +201,22 @@ const ProjectAdvisor = () => {
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <Sparkles className="w-8 h-8 text-[#4FC3F7]" />
-            <h1 className="text-4xl font-bold text-[#212121]">Project Advisor</h1>
+            <Sparkles className="w-6 sm:w-8 h-6 sm:h-8 text-[#4FC3F7]" />
+            <h1 className="text-3xl sm:text-4xl font-bold text-[#212121]">Project Advisor</h1>
           </div>
-          <p className="text-lg text-[#616161]">Get AI-powered project suggestions tailored to your skills and interests</p>
+          <p className="text-base sm:text-lg text-[#616161] px-4">Get AI-powered project suggestions tailored to your skills and interests</p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-6 lg:gap-8">
           <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-2xl text-[#212121]">Tell us about your preferences</CardTitle>
+              <CardTitle className="text-xl sm:text-2xl text-[#212121]">Tell us about your preferences</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
                 <div>
                   <Label className="text-[#212121] font-medium">AI Provider</Label>
-                  <RadioGroup value={selectedApi} onValueChange={setSelectedApi}>
+                  <RadioGroup value={selectedApi} onValueChange={setSelectedApi} className="mt-2">
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="openai" id="openai" />
                       <Label htmlFor="openai">OpenAI</Label>
@@ -221,7 +240,7 @@ const ProjectAdvisor = () => {
                     placeholder="e.g., Web App, Mobile App, AI/ML, Game"
                     value={formData.projectType}
                     onChange={handleInputChange}
-                    className="border-[#E0E0E0] focus:border-[#4FC3F7]"
+                    className="border-[#E0E0E0] focus:border-[#4FC3F7] mt-2"
                   />
                 </div>
 
@@ -233,7 +252,7 @@ const ProjectAdvisor = () => {
                     placeholder="e.g., Healthcare, Finance, Education, Gaming"
                     value={formData.interests}
                     onChange={handleInputChange}
-                    className="border-[#E0E0E0] focus:border-[#4FC3F7]"
+                    className="border-[#E0E0E0] focus:border-[#4FC3F7] mt-2 min-h-[80px]"
                   />
                 </div>
 
@@ -245,13 +264,13 @@ const ProjectAdvisor = () => {
                     placeholder="e.g., JavaScript, Python, React, Machine Learning"
                     value={formData.skills}
                     onChange={handleInputChange}
-                    className="border-[#E0E0E0] focus:border-[#4FC3F7]"
+                    className="border-[#E0E0E0] focus:border-[#4FC3F7] mt-2 min-h-[80px]"
                   />
                 </div>
 
                 <div>
                   <Label className="text-[#212121] font-medium">Difficulty Level</Label>
-                  <RadioGroup value={formData.difficulty} onValueChange={(value) => setFormData(prev => ({ ...prev, difficulty: value }))}>
+                  <RadioGroup value={formData.difficulty} onValueChange={(value) => setFormData(prev => ({ ...prev, difficulty: value }))} className="mt-2">
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="Beginner" id="beginner" />
                       <Label htmlFor="beginner">Beginner</Label>
@@ -282,8 +301,8 @@ const ProjectAdvisor = () => {
           <div className="space-y-6">
             {projects.length > 0 && (
               <div>
-                <h2 className="text-2xl font-bold text-[#212121] mb-4">Suggested Projects</h2>
-                <div className="space-y-4">
+                <h2 className="text-xl sm:text-2xl font-bold text-[#212121] mb-4">Suggested Projects</h2>
+                <div className="space-y-4 max-h-[600px] overflow-y-auto">
                   {projects.map((project) => (
                     <ProjectCard 
                       key={project.id} 
@@ -297,10 +316,20 @@ const ProjectAdvisor = () => {
 
             {projects.length === 0 && !loading && (
               <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
-                <CardContent className="text-center py-12">
-                  <Sparkles className="w-16 h-16 text-[#90CAF9] mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-[#212121] mb-2">Ready to get started?</h3>
-                  <p className="text-[#616161]">Fill out the form and click "Generate Project Ideas" to see personalized suggestions.</p>
+                <CardContent className="text-center py-8 sm:py-12">
+                  <Sparkles className="w-12 sm:w-16 h-12 sm:h-16 text-[#90CAF9] mx-auto mb-4" />
+                  <h3 className="text-lg sm:text-xl font-semibold text-[#212121] mb-2">Ready to get started?</h3>
+                  <p className="text-[#616161] px-4">Fill out the form and click "Generate Project Ideas" to see personalized suggestions.</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {loading && (
+              <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
+                <CardContent className="text-center py-8 sm:py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4FC3F7] mx-auto mb-4"></div>
+                  <h3 className="text-lg sm:text-xl font-semibold text-[#212121] mb-2">Generating Projects...</h3>
+                  <p className="text-[#616161] px-4">Please wait while we create personalized project suggestions for you.</p>
                 </CardContent>
               </Card>
             )}
