@@ -10,6 +10,10 @@ import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import ProjectRecommendations from "./pages/ProjectRecommendations";
 import ProjectAdvisor from "./pages/ProjectAdvisor";
+import Documentation from "./pages/Documentation";
+import Resources from "./pages/Resources";
+import SavedProjects from "./pages/SavedProjects";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +31,10 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/project-recommendations" element={<ProjectRecommendations />} />
           <Route path="/project-advisor" element={<ProjectAdvisor />} />
+          <Route path="/documentation" element={<Documentation />} />
+          <Route path="/resources" element={<Resources />} />
+          <Route path="/saved-projects" element={<SavedProjects />} />
+          <Route path="/settings" element={<Settings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
