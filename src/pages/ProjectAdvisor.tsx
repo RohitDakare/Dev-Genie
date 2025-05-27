@@ -25,7 +25,7 @@ interface Project {
   created_at: string;
 }
 
-// Interface exactly matching the database structure
+// Interface matching the database structure exactly
 interface ProjectDetail {
   id: string;
   project_id: string;
