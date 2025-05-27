@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +24,7 @@ interface Project {
   created_at: string;
 }
 
+// Updated interface to match the actual database structure
 interface ProjectDetail {
   id: string;
   project_id: string;
