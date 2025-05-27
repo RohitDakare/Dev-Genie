@@ -9,7 +9,151 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      project_details: {
+        Row: {
+          created_at: string
+          flow: string | null
+          github_links: string[] | null
+          id: string
+          project_id: string
+          pseudo_code: string | null
+          resources: string[] | null
+          roadmap: string | null
+          structure: string | null
+        }
+        Insert: {
+          created_at?: string
+          flow?: string | null
+          github_links?: string[] | null
+          id?: string
+          project_id: string
+          pseudo_code?: string | null
+          resources?: string[] | null
+          roadmap?: string | null
+          structure?: string | null
+        }
+        Update: {
+          created_at?: string
+          flow?: string | null
+          github_links?: string[] | null
+          id?: string
+          project_id?: string
+          pseudo_code?: string | null
+          resources?: string[] | null
+          roadmap?: string | null
+          structure?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_details_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          api_source: string | null
+          category: string
+          created_at: string
+          description: string
+          difficulty: string | null
+          id: string
+          tags: string[] | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          api_source?: string | null
+          category: string
+          created_at?: string
+          description: string
+          difficulty?: string | null
+          id?: string
+          tags?: string[] | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          api_source?: string | null
+          category?: string
+          created_at?: string
+          description?: string
+          difficulty?: string | null
+          id?: string
+          tags?: string[] | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      saved_projects: {
+        Row: {
+          created_at: string
+          id: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_projects_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_preferences: {
+        Row: {
+          created_at: string
+          difficulty: string | null
+          id: string
+          interests: string | null
+          preferred_api: string | null
+          project_type: string | null
+          skills: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          difficulty?: string | null
+          id?: string
+          interests?: string | null
+          preferred_api?: string | null
+          project_type?: string | null
+          skills?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          difficulty?: string | null
+          id?: string
+          interests?: string | null
+          preferred_api?: string | null
+          project_type?: string | null
+          skills?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

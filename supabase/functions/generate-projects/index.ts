@@ -1,6 +1,7 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,6 +15,48 @@ serve(async (req) => {
 
   try {
     const { projectType, interests, skills, difficulty, selectedApi } = await req.json();
+    
+    // Get the authorization header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('No authorization header');
+    }
+
+    // Create Supabase client
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { 
+        global: { 
+          headers: { Authorization: authHeader } 
+        } 
+      }
+    );
+
+    // Get the current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    console.log('Generating projects for user:', user.id);
+
+    // Save/update user preferences
+    const { error: prefsError } = await supabase
+      .from('user_preferences')
+      .upsert({
+        user_id: user.id,
+        project_type: projectType,
+        interests: interests,
+        skills: skills,
+        difficulty: difficulty,
+        preferred_api: selectedApi,
+        updated_at: new Date().toISOString()
+      });
+
+    if (prefsError) {
+      console.error('Error saving preferences:', prefsError);
+    }
 
     const prompt = `Generate 3 unique project ideas based on these preferences:
     Project Type: ${projectType}
@@ -88,38 +131,72 @@ serve(async (req) => {
     if (content) {
       try {
         const projectsData = JSON.parse(content);
-        return new Response(JSON.stringify({ projects: projectsData }), {
+        
+        // Store projects in database
+        const projectsToInsert = projectsData.map((project: any) => ({
+          user_id: user.id,
+          title: project.title,
+          description: project.description,
+          difficulty: project.difficulty,
+          tags: project.tags || [],
+          category: project.category,
+          api_source: selectedApi
+        }));
+
+        const { data: insertedProjects, error: insertError } = await supabase
+          .from('projects')
+          .insert(projectsToInsert)
+          .select();
+
+        if (insertError) {
+          console.error('Error inserting projects:', insertError);
+          throw insertError;
+        }
+
+        console.log('Successfully stored projects:', insertedProjects?.length);
+
+        return new Response(JSON.stringify({ projects: insertedProjects }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
-      } catch {
-        // Return fallback projects if parsing fails
+      } catch (parseError) {
+        console.error('Error parsing AI response:', parseError);
+        // Return fallback projects and store them
         const fallbackProjects = [
           {
-            id: "1",
+            user_id: user.id,
             title: "Personal Finance Tracker",
             description: "A web application to track expenses, income, and budget planning with data visualization.",
             difficulty: difficulty,
             tags: ["React", "Chart.js", "Local Storage"],
-            category: "Web Development"
+            category: "Web Development",
+            api_source: selectedApi
           },
           {
-            id: "2", 
+            user_id: user.id,
             title: "Weather Forecast App",
             description: "Real-time weather application with location-based forecasts and weather alerts.",
             difficulty: difficulty,
             tags: ["JavaScript", "API Integration", "Geolocation"],
-            category: "Web Development"
+            category: "Web Development",
+            api_source: selectedApi
           },
           {
-            id: "3",
+            user_id: user.id,
             title: "Task Management System",
             description: "Collaborative task management with team features, deadlines, and progress tracking.",
             difficulty: difficulty,
             tags: ["CRUD Operations", "Database", "User Authentication"],
-            category: "Full Stack"
+            category: "Full Stack",
+            api_source: selectedApi
           }
         ];
-        return new Response(JSON.stringify({ projects: fallbackProjects }), {
+
+        const { data: fallbackInserted } = await supabase
+          .from('projects')
+          .insert(fallbackProjects)
+          .select();
+
+        return new Response(JSON.stringify({ projects: fallbackInserted }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }

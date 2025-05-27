@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,17 +20,21 @@ interface Project {
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
   tags: string[];
   category: string;
+  user_id: string;
+  api_source: string;
+  created_at: string;
 }
 
 interface ProjectDetail {
-  title: string;
-  description: string;
+  id: string;
+  project_id: string;
   structure: string;
   flow: string;
   roadmap: string;
-  pseudoCode: string;
+  pseudo_code: string;
   resources: string[];
-  githubLinks: string[];
+  github_links: string[];
+  created_at: string;
 }
 
 const ProjectAdvisor = () => {

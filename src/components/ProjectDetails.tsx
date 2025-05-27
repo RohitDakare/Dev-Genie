@@ -4,14 +4,15 @@ import { Badge } from "@/components/ui/badge";
 import { ExternalLink, Github, Code, FileText, MapPin, Lightbulb } from "lucide-react";
 
 interface ProjectDetail {
-  title: string;
-  description: string;
+  id: string;
+  project_id: string;
   structure: string;
   flow: string;
   roadmap: string;
-  pseudoCode: string;
+  pseudo_code: string;
   resources: string[];
-  githubLinks: string[];
+  github_links: string[];
+  created_at: string;
 }
 
 interface ProjectDetailsProps {
@@ -21,20 +22,6 @@ interface ProjectDetailsProps {
 export const ProjectDetails = ({ details }: ProjectDetailsProps) => {
   return (
     <div className="space-y-6">
-      {/* Overview */}
-      <Card className="shadow-xl border-0 bg-white/90">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2 text-2xl text-[#212121]">
-            <FileText className="w-6 h-6 text-[#4FC3F7]" />
-            <span>Project Overview</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <h3 className="text-xl font-semibold text-[#212121] mb-3">{details.title}</h3>
-          <p className="text-[#616161] leading-relaxed">{details.description}</p>
-        </CardContent>
-      </Card>
-
       {/* Project Structure */}
       <Card className="shadow-xl border-0 bg-white/90">
         <CardHeader>
@@ -90,7 +77,7 @@ export const ProjectDetails = ({ details }: ProjectDetailsProps) => {
         </CardHeader>
         <CardContent>
           <pre className="bg-[#F5F5F5] p-4 rounded-lg text-sm overflow-x-auto">
-            {details.pseudoCode}
+            {details.pseudo_code}
           </pre>
         </CardContent>
       </Card>
@@ -133,7 +120,7 @@ export const ProjectDetails = ({ details }: ProjectDetailsProps) => {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {details.githubLinks.map((link, index) => (
+              {details.github_links.map((link, index) => (
                 <a
                   key={index}
                   href={link}

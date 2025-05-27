@@ -1,6 +1,7 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,6 +15,45 @@ serve(async (req) => {
 
   try {
     const { project, selectedApi } = await req.json();
+    
+    // Get the authorization header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('No authorization header');
+    }
+
+    // Create Supabase client
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { 
+        global: { 
+          headers: { Authorization: authHeader } 
+        } 
+      }
+    );
+
+    // Get the current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      throw new Error('User not authenticated');
+    }
+
+    console.log('Generating project details for project:', project.id);
+
+    // Check if details already exist
+    const { data: existingDetails } = await supabase
+      .from('project_details')
+      .select('*')
+      .eq('project_id', project.id)
+      .single();
+
+    if (existingDetails) {
+      console.log('Returning existing project details');
+      return new Response(JSON.stringify({ details: existingDetails }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const detailPrompt = `Provide detailed information for the project "${project.title}":
     
@@ -92,31 +132,63 @@ serve(async (req) => {
     if (content) {
       try {
         const details = JSON.parse(content);
-        return new Response(JSON.stringify({ details }), {
+        
+        // Store project details in database
+        const detailsToInsert = {
+          project_id: project.id,
+          structure: details.structure,
+          flow: details.flow,
+          roadmap: details.roadmap,
+          pseudo_code: details.pseudoCode,
+          resources: details.resources || [],
+          github_links: details.githubLinks || []
+        };
+
+        const { data: insertedDetails, error: insertError } = await supabase
+          .from('project_details')
+          .insert(detailsToInsert)
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('Error inserting project details:', insertError);
+          throw insertError;
+        }
+
+        console.log('Successfully stored project details');
+
+        return new Response(JSON.stringify({ details: insertedDetails }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
-      } catch {
-        // Return fallback details if parsing fails
+      } catch (parseError) {
+        console.error('Error parsing AI response:', parseError);
+        // Return fallback details and store them
         const fallbackDetails = {
-          title: project.title,
-          description: `${project.description} This project involves modern web development practices and user-centered design principles.`,
+          project_id: project.id,
           structure: "Frontend: React.js with TypeScript\nBackend: Node.js with Express\nDatabase: MongoDB\nAuthentication: JWT",
           flow: "1. User Registration/Login\n2. Dashboard Overview\n3. Core Functionality\n4. Data Management\n5. Settings & Profile",
           roadmap: "Phase 1: Setup & Authentication (Week 1)\nPhase 2: Core Features (Week 2-3)\nPhase 3: UI/UX Polish (Week 4)\nPhase 4: Testing & Deployment (Week 5)",
-          pseudoCode: "// Main Application Logic\nfunction initializeApp() {\n  authenticateUser();\n  loadUserData();\n  renderDashboard();\n}",
+          pseudo_code: "// Main Application Logic\nfunction initializeApp() {\n  authenticateUser();\n  loadUserData();\n  renderDashboard();\n}",
           resources: [
             "https://reactjs.org/docs",
             "https://nodejs.org/en/docs",
             "https://developer.mozilla.org/",
             "https://stackoverflow.com/"
           ],
-          githubLinks: [
+          github_links: [
             "https://github.com/topics/react",
             "https://github.com/topics/nodejs",
             "https://github.com/topics/" + project.category.toLowerCase().replace(' ', '-')
           ]
         };
-        return new Response(JSON.stringify({ details: fallbackDetails }), {
+
+        const { data: fallbackInserted } = await supabase
+          .from('project_details')
+          .insert(fallbackDetails)
+          .select()
+          .single();
+
+        return new Response(JSON.stringify({ details: fallbackInserted }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
