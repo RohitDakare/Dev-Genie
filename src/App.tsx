@@ -4,6 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Layout } from "./components/Layout";
+import { AuthGuard } from "./components/AuthGuard";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -25,18 +27,94 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/project-recommendations" element={<ProjectRecommendations />} />
-          <Route path="/project-advisor" element={<ProjectAdvisor />} />
-          <Route path="/documentation" element={<Documentation />} />
-          <Route path="/resources" element={<Resources />} />
-          <Route path="/saved-projects" element={<SavedProjects />} />
-          <Route path="/settings" element={<Settings />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
+          <Route path="/" element={<Layout />}>
+            {/* Public routes */}
+            <Route 
+              index 
+              element={
+                <AuthGuard requireAuth={false}>
+                  <Index />
+                </AuthGuard>
+              } 
+            />
+            <Route 
+              path="/login" 
+              element={
+                <AuthGuard requireAuth={false}>
+                  <Login />
+                </AuthGuard>
+              } 
+            />
+            <Route 
+              path="/signup" 
+              element={
+                <AuthGuard requireAuth={false}>
+                  <Signup />
+                </AuthGuard>
+              } 
+            />
+            
+            {/* Protected routes */}
+            <Route 
+              path="/dashboard" 
+              element={
+                <AuthGuard requireAuth={true}>
+                  <Dashboard />
+                </AuthGuard>
+              } 
+            />
+            <Route 
+              path="/project-recommendations" 
+              element={
+                <AuthGuard requireAuth={true}>
+                  <ProjectRecommendations />
+                </AuthGuard>
+              } 
+            />
+            <Route 
+              path="/project-advisor" 
+              element={
+                <AuthGuard requireAuth={true}>
+                  <ProjectAdvisor />
+                </AuthGuard>
+              } 
+            />
+            <Route 
+              path="/documentation" 
+              element={
+                <AuthGuard requireAuth={true}>
+                  <Documentation />
+                </AuthGuard>
+              } 
+            />
+            <Route 
+              path="/resources" 
+              element={
+                <AuthGuard requireAuth={true}>
+                  <Resources />
+                </AuthGuard>
+              } 
+            />
+            <Route 
+              path="/saved-projects" 
+              element={
+                <AuthGuard requireAuth={true}>
+                  <SavedProjects />
+                </AuthGuard>
+              } 
+            />
+            <Route 
+              path="/settings" 
+              element={
+                <AuthGuard requireAuth={true}>
+                  <Settings />
+                </AuthGuard>
+              } 
+            />
+            
+            {/* Catch-all route */}
+            <Route path="*" element={<NotFound />} />
+          </Route>
         </Routes>
       </BrowserRouter>
     </TooltipProvider>

@@ -41,27 +41,7 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F9FBFD] via-[#FFFFFF] to-[#F0F8FF]">
-      {/* Header */}
-      <header className="container mx-auto px-4 py-6 flex justify-between items-center">
-        <div className="flex items-center space-x-2">
-          <Sparkles className="w-8 h-8 text-[#4FC3F7]" />
-          <span className="text-2xl font-bold text-[#212121]">Dev Genie</span>
-        </div>
-        <div className="flex items-center space-x-4">
-          <Link to="/login">
-            <Button variant="ghost" className="text-[#616161] hover:text-[#212121]">
-              Login
-            </Button>
-          </Link>
-          <Link to="/signup">
-            <Button className="bg-[#4FC3F7] hover:bg-[#29B6F6] text-white">
-              Get Started
-            </Button>
-          </Link>
-        </div>
-      </header>
-
+    <div className="min-h-screen">
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-20 text-center">
         <div className="max-w-4xl mx-auto">
