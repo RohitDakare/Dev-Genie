@@ -8,13 +8,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Sparkles } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const [formData, setFormData] = useState({
-    username: "",
+    email: "",
     password: "",
     rememberMe: false
   });
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -25,14 +27,41 @@ const Login = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // For demo purposes, just show success and navigate
-    toast({
-      title: "Welcome back!",
-      description: "You've successfully logged in to Dev Genie.",
-    });
-    navigate("/dashboard");
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (error) {
+        toast({
+          title: "Login failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data.user) {
+        toast({
+          title: "Welcome back!",
+          description: "You've successfully logged in to Dev Genie.",
+        });
+        // Navigation will be handled by AuthGuard
+      }
+    } catch (error) {
+      toast({
+        title: "Login failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -69,13 +98,13 @@ const Login = () => {
             <CardContent className="space-y-6">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="username" className="text-[#212121] font-medium">Username</Label>
+                  <Label htmlFor="email" className="text-[#212121] font-medium">Email</Label>
                   <Input
-                    id="username"
-                    name="username"
-                    type="text"
-                    placeholder="Enter your username"
-                    value={formData.username}
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={formData.email}
                     onChange={handleInputChange}
                     className="border-[#E0E0E0] focus:border-[#4FC3F7] focus:ring-[#4FC3F7]/20"
                     required
@@ -112,9 +141,10 @@ const Login = () => {
 
                 <Button 
                   type="submit" 
-                  className="w-full bg-[#4FC3F7] hover:bg-[#29B6F6] text-white py-3 text-lg font-medium"
+                  disabled={loading}
+                  className="w-full bg-[#4FC3F7] hover:bg-[#29B6F6] text-white py-3 text-lg font-medium disabled:opacity-50"
                 >
-                  Sign In
+                  {loading ? "Signing in..." : "Sign In"}
                 </Button>
               </form>
 
