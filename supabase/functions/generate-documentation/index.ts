@@ -14,7 +14,7 @@ serve(async (req) => {
   }
 
   try {
-    const { projectTitle, projectDescription, requirements, features, techStack, documentType, selectedApi } = await req.json();
+    const { projectTitle, projectDescription, requirements, features, techStack, documentType } = await req.json();
     
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -76,79 +76,112 @@ serve(async (req) => {
         break;
     }
 
-    let response;
-    let content;
+    // Call all three APIs simultaneously
+    const apiCalls = [];
 
-    if (selectedApi === "openai") {
-      const openaiKey = Deno.env.get('OPENAI_API_KEY');
-      response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openaiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: [{ role: 'user', content: documentPrompt }],
-          temperature: 0.3,
-        }),
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        content = data.choices[0].message.content;
-      }
-    } else if (selectedApi === "claude") {
-      const claudeKey = Deno.env.get('CLAUDE_API_KEY');
-      response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': claudeKey,
-          'Content-Type': 'application/json',
-          'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify({
-          model: 'claude-3-sonnet-20240229',
-          max_tokens: 4000,
-          messages: [{ role: 'user', content: documentPrompt }],
-        }),
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        content = data.content[0].text;
-      }
-    } else if (selectedApi === "gemini") {
-      const geminiKey = Deno.env.get('GEMINI_API_KEY');
-      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${geminiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{ text: documentPrompt }]
-          }]
-        }),
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        content = data.candidates[0].content.parts[0].text;
-      }
+    // OpenAI call
+    const openaiKey = Deno.env.get('OPENAI_API_KEY');
+    if (openaiKey) {
+      apiCalls.push(
+        fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            messages: [{ role: 'user', content: documentPrompt }],
+            temperature: 0.3,
+          }),
+        }).then(async (response) => {
+          if (response.ok) {
+            const data = await response.json();
+            return { source: 'OpenAI', content: data.choices[0].message.content };
+          }
+          return null;
+        }).catch(() => null)
+      );
     }
 
-    if (content) {
+    // Claude call
+    const claudeKey = Deno.env.get('CLAUDE_API_KEY');
+    if (claudeKey) {
+      apiCalls.push(
+        fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'x-api-key': claudeKey,
+            'Content-Type': 'application/json',
+            'anthropic-version': '2023-06-01'
+          },
+          body: JSON.stringify({
+            model: 'claude-3-sonnet-20240229',
+            max_tokens: 4000,
+            messages: [{ role: 'user', content: documentPrompt }],
+          }),
+        }).then(async (response) => {
+          if (response.ok) {
+            const data = await response.json();
+            return { source: 'Claude', content: data.content[0].text };
+          }
+          return null;
+        }).catch(() => null)
+      );
+    }
+
+    // Gemini call
+    const geminiKey = Deno.env.get('GEMINI_API_KEY');
+    if (geminiKey) {
+      apiCalls.push(
+        fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${geminiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{ text: documentPrompt }]
+            }]
+          }),
+        }).then(async (response) => {
+          if (response.ok) {
+            const data = await response.json();
+            return { source: 'Gemini', content: data.candidates[0].content.parts[0].text };
+          }
+          return null;
+        }).catch(() => null)
+      );
+    }
+
+    // Wait for all API calls to complete
+    const responses = await Promise.all(apiCalls);
+    const validResponses = responses.filter(Boolean);
+
+    if (validResponses.length > 0) {
+      // Combine all responses into a comprehensive document
+      let combinedContent = `# ${projectTitle} - ${documentType.toUpperCase()} Documentation\n\n`;
+      combinedContent += `*Generated using multiple AI models for comprehensive coverage*\n\n`;
+      
+      validResponses.forEach((response, index) => {
+        if (response?.content) {
+          combinedContent += `## Section ${index + 1} (Generated by ${response.source})\n\n`;
+          combinedContent += response.content;
+          combinedContent += `\n\n---\n\n`;
+        }
+      });
+
       return new Response(JSON.stringify({ 
-        documentation: content,
+        documentation: combinedContent,
         documentType: documentType,
-        projectTitle: projectTitle 
+        projectTitle: projectTitle,
+        sources: validResponses.map(r => r.source)
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    throw new Error('Failed to generate documentation');
+    throw new Error('Failed to generate documentation from any API');
   } catch (error) {
     console.error('Error generating documentation:', error);
     return new Response(JSON.stringify({ error: error.message }), {

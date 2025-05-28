@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +19,6 @@ const Documentation = () => {
     techStack: "",
     documentType: "srs"
   });
-  const [selectedApi, setSelectedApi] = useState("openai");
   const [loading, setLoading] = useState(false);
   const [generatedDoc, setGeneratedDoc] = useState("");
   const [copied, setCopied] = useState(false);
@@ -46,10 +44,7 @@ const Documentation = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-documentation', {
-        body: {
-          ...formData,
-          selectedApi: selectedApi
-        }
+        body: formData
       });
 
       if (error) throw error;
@@ -58,7 +53,7 @@ const Documentation = () => {
         setGeneratedDoc(data.documentation);
         toast({
           title: "Documentation Generated!",
-          description: "Your project documentation has been created successfully.",
+          description: "Your project documentation has been created using multiple AI models.",
         });
       }
     } catch (error) {
@@ -127,7 +122,7 @@ const Documentation = () => {
             <FileText className="w-8 h-8 text-[#4FC3F7]" />
             <h1 className="text-4xl font-bold text-[#212121]">Documentation Generator</h1>
           </div>
-          <p className="text-lg text-[#616161]">Create comprehensive project documentation with AI assistance</p>
+          <p className="text-lg text-[#616161]">Create comprehensive project documentation using multiple AI models</p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
@@ -136,24 +131,6 @@ const Documentation = () => {
               <CardTitle className="text-2xl text-[#212121]">Project Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div>
-                <Label className="text-[#212121] font-medium">AI Provider</Label>
-                <RadioGroup value={selectedApi} onValueChange={setSelectedApi} className="mt-2">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="openai" id="openai-doc" />
-                    <Label htmlFor="openai-doc">OpenAI</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="claude" id="claude-doc" />
-                    <Label htmlFor="claude-doc">Claude</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="gemini" id="gemini-doc" />
-                    <Label htmlFor="gemini-doc">Gemini</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
               <div>
                 <Label htmlFor="projectTitle" className="text-[#212121] font-medium">Project Title *</Label>
                 <Input
@@ -229,12 +206,18 @@ const Documentation = () => {
                 </Select>
               </div>
 
+              <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                <p className="text-sm text-green-700">
+                  <span className="font-semibold">🚀 Multi-AI Power:</span> Documentation generated using OpenAI, Claude, and Gemini for comprehensive coverage.
+                </p>
+              </div>
+
               <Button 
                 onClick={generateDocumentation}
                 disabled={loading}
                 className="w-full bg-[#4FC3F7] hover:bg-[#29B6F6] text-white py-3"
               >
-                {loading ? "Generating..." : "Generate Documentation"}
+                {loading ? "Generating with Multiple AIs..." : "Generate Documentation"}
                 <Sparkles className="w-4 h-4 ml-2" />
               </Button>
             </CardContent>

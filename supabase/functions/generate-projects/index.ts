@@ -14,15 +14,13 @@ serve(async (req) => {
   }
 
   try {
-    const { projectType, interests, skills, difficulty, selectedApi } = await req.json();
+    const { projectType, interests, skills, difficulty } = await req.json();
     
-    // Get the authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('No authorization header');
     }
 
-    // Create Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -33,7 +31,6 @@ serve(async (req) => {
       }
     );
 
-    // Get the current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
       throw new Error('User not authenticated');
@@ -50,7 +47,7 @@ serve(async (req) => {
         interests: interests,
         skills: skills,
         difficulty: difficulty,
-        preferred_api: selectedApi,
+        preferred_api: 'all',
         updated_at: new Date().toISOString()
       });
 
@@ -58,7 +55,7 @@ serve(async (req) => {
       console.error('Error saving preferences:', prefsError);
     }
 
-    const prompt = `Generate 15 unique and diverse project ideas based on these preferences:
+    const basePrompt = `Generate 5-7 unique and diverse project ideas based on these preferences:
     Project Type: ${projectType}
     Interests: ${interests}
     Skills: ${skills}
@@ -81,159 +78,206 @@ serve(async (req) => {
     - estimatedTime (like "2-3 weeks", "1 month", etc.)
     - marketDemand (High, Medium, Low)`;
 
-    let response;
-    let content;
+    // Call all three APIs simultaneously
+    const apiCalls = [];
 
-    if (selectedApi === "openai") {
-      const openaiKey = Deno.env.get('OPENAI_API_KEY');
-      response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openaiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.8,
-        }),
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        content = data.choices[0].message.content;
-      }
-    } else if (selectedApi === "claude") {
-      const claudeKey = Deno.env.get('CLAUDE_API_KEY');
-      response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': claudeKey,
-          'Content-Type': 'application/json',
-          'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify({
-          model: 'claude-3-sonnet-20240229',
-          max_tokens: 4000,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        content = data.content[0].text;
-      }
-    } else if (selectedApi === "gemini") {
-      const geminiKey = Deno.env.get('GEMINI_API_KEY');
-      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${geminiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{ text: prompt }]
-          }],
-          generationConfig: {
+    // OpenAI call
+    const openaiKey = Deno.env.get('OPENAI_API_KEY');
+    if (openaiKey) {
+      apiCalls.push(
+        fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            messages: [{ role: 'user', content: basePrompt }],
             temperature: 0.8,
-            maxOutputTokens: 4000,
+          }),
+        }).then(async (response) => {
+          if (response.ok) {
+            const data = await response.json();
+            return { source: 'openai', content: data.choices[0].message.content };
           }
-        }),
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        content = data.candidates[0].content.parts[0].text;
-      }
+          return null;
+        }).catch(() => null)
+      );
     }
 
-    if (content) {
-      try {
-        // Clean the content to extract JSON
-        const jsonMatch = content.match(/\[[\s\S]*\]/);
-        const cleanContent = jsonMatch ? jsonMatch[0] : content;
-        const projectsData = JSON.parse(cleanContent);
-        
-        // Store projects in database
-        const projectsToInsert = projectsData.map((project: any) => ({
-          user_id: user.id,
-          title: project.title,
-          description: project.description,
-          difficulty: project.difficulty,
-          tags: project.tags || [],
-          category: project.category,
-          api_source: selectedApi,
-          estimated_time: project.estimatedTime || '2-4 weeks',
-          market_demand: project.marketDemand || 'Medium'
-        }));
+    // Claude call
+    const claudeKey = Deno.env.get('CLAUDE_API_KEY');
+    if (claudeKey) {
+      apiCalls.push(
+        fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'x-api-key': claudeKey,
+            'Content-Type': 'application/json',
+            'anthropic-version': '2023-06-01'
+          },
+          body: JSON.stringify({
+            model: 'claude-3-sonnet-20240229',
+            max_tokens: 4000,
+            messages: [{ role: 'user', content: basePrompt }],
+          }),
+        }).then(async (response) => {
+          if (response.ok) {
+            const data = await response.json();
+            return { source: 'claude', content: data.content[0].text };
+          }
+          return null;
+        }).catch(() => null)
+      );
+    }
 
-        const { data: insertedProjects, error: insertError } = await supabase
-          .from('projects')
-          .insert(projectsToInsert)
-          .select();
+    // Gemini call
+    const geminiKey = Deno.env.get('GEMINI_API_KEY');
+    if (geminiKey) {
+      apiCalls.push(
+        fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${geminiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{ text: basePrompt }]
+            }],
+            generationConfig: {
+              temperature: 0.8,
+              maxOutputTokens: 4000,
+            }
+          }),
+        }).then(async (response) => {
+          if (response.ok) {
+            const data = await response.json();
+            return { source: 'gemini', content: data.candidates[0].content.parts[0].text };
+          }
+          return null;
+        }).catch(() => null)
+      );
+    }
 
-        if (insertError) {
-          console.error('Error inserting projects:', insertError);
-          throw insertError;
+    // Wait for all API calls to complete
+    const responses = await Promise.all(apiCalls);
+    const validResponses = responses.filter(Boolean);
+
+    let allProjects = [];
+
+    // Parse responses from all APIs
+    for (const response of validResponses) {
+      if (response?.content) {
+        try {
+          const jsonMatch = response.content.match(/\[[\s\S]*\]/);
+          const cleanContent = jsonMatch ? jsonMatch[0] : response.content;
+          const projects = JSON.parse(cleanContent);
+          
+          // Add source information and ensure unique IDs
+          const projectsWithSource = projects.map((project: any, index: number) => ({
+            ...project,
+            id: `${response.source}-${Date.now()}-${index}`,
+            api_source: response.source
+          }));
+          
+          allProjects.push(...projectsWithSource);
+        } catch (parseError) {
+          console.error(`Error parsing ${response.source} response:`, parseError);
         }
-
-        console.log('Successfully stored projects:', insertedProjects?.length);
-
-        return new Response(JSON.stringify({ projects: insertedProjects }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      } catch (parseError) {
-        console.error('Error parsing AI response:', parseError);
-        // Return enhanced fallback projects
-        const fallbackProjects = [
-          {
-            user_id: user.id,
-            title: "AI-Powered Personal Finance Assistant",
-            description: "A comprehensive financial management platform with AI-driven insights, expense categorization, and investment recommendations.",
-            difficulty: difficulty,
-            tags: ["React", "Node.js", "AI/ML", "Chart.js", "MongoDB"],
-            category: "Web Development",
-            api_source: selectedApi,
-            estimated_time: "3-4 weeks",
-            market_demand: "High"
-          },
-          {
-            user_id: user.id,
-            title: "Smart Home IoT Control Hub",
-            description: "Centralized dashboard for managing smart home devices with automation rules and energy monitoring capabilities.",
-            difficulty: difficulty,
-            tags: ["React Native", "IoT", "Node.js", "WebSocket", "SQLite"],
-            category: "Mobile Development",
-            api_source: selectedApi,
-            estimated_time: "4-6 weeks",
-            market_demand: "High"
-          },
-          {
-            user_id: user.id,
-            title: "Real-time Collaborative Code Editor",
-            description: "Online code editor with real-time collaboration, syntax highlighting, and integrated version control features.",
-            difficulty: difficulty,
-            tags: ["WebSocket", "React", "Monaco Editor", "Git", "Docker"],
-            category: "Web Development",
-            api_source: selectedApi,
-            estimated_time: "5-7 weeks",
-            market_demand: "Medium"
-          },
-          // ... add 12 more diverse projects here
-        ];
-
-        const { data: fallbackInserted } = await supabase
-          .from('projects')
-          .insert(fallbackProjects)
-          .select();
-
-        return new Response(JSON.stringify({ projects: fallbackInserted }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
       }
     }
 
-    throw new Error('Failed to generate projects');
+    // If we have projects from APIs, use them
+    if (allProjects.length > 0) {
+      // Remove duplicates based on title similarity and limit to 20
+      const uniqueProjects = [];
+      const seenTitles = new Set();
+      
+      for (const project of allProjects) {
+        const titleKey = project.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (!seenTitles.has(titleKey) && uniqueProjects.length < 20) {
+          seenTitles.add(titleKey);
+          uniqueProjects.push(project);
+        }
+      }
+
+      // Store projects in database
+      const projectsToInsert = uniqueProjects.map((project: any) => ({
+        user_id: user.id,
+        title: project.title,
+        description: project.description,
+        difficulty: project.difficulty,
+        tags: project.tags || [],
+        category: project.category,
+        api_source: project.api_source,
+        estimated_time: project.estimatedTime || '2-4 weeks',
+        market_demand: project.marketDemand || 'Medium'
+      }));
+
+      const { data: insertedProjects, error: insertError } = await supabase
+        .from('projects')
+        .insert(projectsToInsert)
+        .select();
+
+      if (insertError) {
+        console.error('Error inserting projects:', insertError);
+        throw insertError;
+      }
+
+      console.log('Successfully stored projects from multiple APIs:', insertedProjects?.length);
+
+      return new Response(JSON.stringify({ projects: insertedProjects }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Fallback projects if no API responses
+    const fallbackProjects = [
+      {
+        user_id: user.id,
+        title: "AI-Powered Personal Finance Assistant",
+        description: "A comprehensive financial management platform with AI-driven insights, expense categorization, and investment recommendations.",
+        difficulty: difficulty,
+        tags: ["React", "Node.js", "AI/ML", "Chart.js", "MongoDB"],
+        category: "Web Development",
+        api_source: "fallback",
+        estimated_time: "3-4 weeks",
+        market_demand: "High"
+      },
+      {
+        user_id: user.id,
+        title: "Smart Home IoT Control Hub",
+        description: "Centralized dashboard for managing smart home devices with automation rules and energy monitoring capabilities.",
+        difficulty: difficulty,
+        tags: ["React Native", "IoT", "Node.js", "WebSocket", "SQLite"],
+        category: "Mobile Development",
+        api_source: "fallback",
+        estimated_time: "4-6 weeks",
+        market_demand: "High"
+      },
+      {
+        user_id: user.id,
+        title: "Real-time Collaborative Code Editor",
+        description: "Online code editor with real-time collaboration, syntax highlighting, and integrated version control features.",
+        difficulty: difficulty,
+        tags: ["WebSocket", "React", "Monaco Editor", "Git", "Docker"],
+        category: "Web Development",
+        api_source: "fallback",
+        estimated_time: "5-7 weeks",
+        market_demand: "Medium"
+      }
+    ];
+
+    const { data: fallbackInserted } = await supabase
+      .from('projects')
+      .insert(fallbackProjects)
+      .select();
+
+    return new Response(JSON.stringify({ projects: fallbackInserted }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
   } catch (error) {
     console.error('Error generating projects:', error);
     return new Response(JSON.stringify({ error: error.message }), {

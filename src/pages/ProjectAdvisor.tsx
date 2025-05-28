@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,7 +51,6 @@ const ProjectAdvisor = () => {
   const [projectDetails, setProjectDetails] = useState<ProjectDetail | null>(null);
   const [showResearchPaper, setShowResearchPaper] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [selectedApi, setSelectedApi] = useState("openai");
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -79,8 +77,7 @@ const ProjectAdvisor = () => {
           projectType: formData.projectType,
           interests: formData.interests,
           skills: formData.skills,
-          difficulty: formData.difficulty,
-          selectedApi: selectedApi
+          difficulty: formData.difficulty
         }
       });
 
@@ -90,7 +87,7 @@ const ProjectAdvisor = () => {
         setProjects(data.projects);
         toast({
           title: "Projects Generated!",
-          description: "Here are your personalized project suggestions.",
+          description: "Here are your personalized project suggestions from multiple AI models.",
         });
       }
     } catch (error) {
@@ -112,8 +109,7 @@ const ProjectAdvisor = () => {
     try {
       const { data, error } = await supabase.functions.invoke('project-details', {
         body: {
-          project: project,
-          selectedApi: selectedApi
+          project: project
         }
       });
 
@@ -204,7 +200,7 @@ const ProjectAdvisor = () => {
             <Sparkles className="w-6 sm:w-8 h-6 sm:h-8 text-[#4FC3F7]" />
             <h1 className="text-3xl sm:text-4xl font-bold text-[#212121]">Project Advisor</h1>
           </div>
-          <p className="text-base sm:text-lg text-[#616161] px-4">Get AI-powered project suggestions tailored to your skills and interests</p>
+          <p className="text-base sm:text-lg text-[#616161] px-4">Get AI-powered project suggestions from multiple AI models (OpenAI, Claude, Gemini)</p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-8">
@@ -214,24 +210,6 @@ const ProjectAdvisor = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                <div>
-                  <Label className="text-[#212121] font-medium">AI Provider</Label>
-                  <RadioGroup value={selectedApi} onValueChange={setSelectedApi} className="mt-2">
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="openai" id="openai" />
-                      <Label htmlFor="openai">OpenAI</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="claude" id="claude" />
-                      <Label htmlFor="claude">Claude</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="gemini" id="gemini" />
-                      <Label htmlFor="gemini">Gemini</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-
                 <div>
                   <Label htmlFor="projectType" className="text-[#212121] font-medium">Project Type *</Label>
                   <Input
@@ -286,12 +264,18 @@ const ProjectAdvisor = () => {
                   </RadioGroup>
                 </div>
 
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-700">
+                    <span className="font-semibold">🤖 Multi-AI Generation:</span> We use OpenAI, Claude, and Gemini simultaneously to provide diverse and comprehensive project suggestions.
+                  </p>
+                </div>
+
                 <Button 
                   onClick={generateProjects}
                   disabled={loading}
                   className="w-full bg-[#4FC3F7] hover:bg-[#29B6F6] text-white py-3"
                 >
-                  {loading ? "Generating..." : "Generate Project Ideas"}
+                  {loading ? "Generating from Multiple AIs..." : "Generate Project Ideas"}
                   <Sparkles className="w-4 h-4 ml-2" />
                 </Button>
               </div>
