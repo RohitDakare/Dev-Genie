@@ -58,13 +58,28 @@ serve(async (req) => {
       console.error('Error saving preferences:', prefsError);
     }
 
-    const prompt = `Generate 3 unique project ideas based on these preferences:
+    const prompt = `Generate 15 unique and diverse project ideas based on these preferences:
     Project Type: ${projectType}
     Interests: ${interests}
     Skills: ${skills}
     Difficulty: ${difficulty}
     
-    Return a JSON array with objects containing: id, title, description, difficulty, tags (array), category`;
+    Create projects that are:
+    - Practical and buildable with current technology
+    - Varied in scope and complexity
+    - Market-relevant and useful
+    - Include both trending and evergreen concepts
+    - Cover different aspects of ${projectType} development
+    
+    Return a JSON array with objects containing: 
+    - id (unique identifier)
+    - title (clear, descriptive name)
+    - description (detailed 2-3 sentence explanation)
+    - difficulty (must be one of: Beginner, Intermediate, Advanced)
+    - tags (array of 3-5 relevant technology tags)
+    - category (specific category like "Web Development", "Mobile App", "AI/ML", etc.)
+    - estimatedTime (like "2-3 weeks", "1 month", etc.)
+    - marketDemand (High, Medium, Low)`;
 
     let response;
     let content;
@@ -78,7 +93,7 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: 'gpt-4o',
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.8,
         }),
@@ -99,7 +114,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           model: 'claude-3-sonnet-20240229',
-          max_tokens: 1000,
+          max_tokens: 4000,
           messages: [{ role: 'user', content: prompt }],
         }),
       });
@@ -110,7 +125,7 @@ serve(async (req) => {
       }
     } else if (selectedApi === "gemini") {
       const geminiKey = Deno.env.get('GEMINI_API_KEY');
-      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiKey}`, {
+      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${geminiKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -118,7 +133,11 @@ serve(async (req) => {
         body: JSON.stringify({
           contents: [{
             parts: [{ text: prompt }]
-          }]
+          }],
+          generationConfig: {
+            temperature: 0.8,
+            maxOutputTokens: 4000,
+          }
         }),
       });
       
@@ -130,7 +149,10 @@ serve(async (req) => {
 
     if (content) {
       try {
-        const projectsData = JSON.parse(content);
+        // Clean the content to extract JSON
+        const jsonMatch = content.match(/\[[\s\S]*\]/);
+        const cleanContent = jsonMatch ? jsonMatch[0] : content;
+        const projectsData = JSON.parse(cleanContent);
         
         // Store projects in database
         const projectsToInsert = projectsData.map((project: any) => ({
@@ -140,7 +162,9 @@ serve(async (req) => {
           difficulty: project.difficulty,
           tags: project.tags || [],
           category: project.category,
-          api_source: selectedApi
+          api_source: selectedApi,
+          estimated_time: project.estimatedTime || '2-4 weeks',
+          market_demand: project.marketDemand || 'Medium'
         }));
 
         const { data: insertedProjects, error: insertError } = await supabase
@@ -160,35 +184,42 @@ serve(async (req) => {
         });
       } catch (parseError) {
         console.error('Error parsing AI response:', parseError);
-        // Return fallback projects and store them
+        // Return enhanced fallback projects
         const fallbackProjects = [
           {
             user_id: user.id,
-            title: "Personal Finance Tracker",
-            description: "A web application to track expenses, income, and budget planning with data visualization.",
+            title: "AI-Powered Personal Finance Assistant",
+            description: "A comprehensive financial management platform with AI-driven insights, expense categorization, and investment recommendations.",
             difficulty: difficulty,
-            tags: ["React", "Chart.js", "Local Storage"],
+            tags: ["React", "Node.js", "AI/ML", "Chart.js", "MongoDB"],
             category: "Web Development",
-            api_source: selectedApi
+            api_source: selectedApi,
+            estimated_time: "3-4 weeks",
+            market_demand: "High"
           },
           {
             user_id: user.id,
-            title: "Weather Forecast App",
-            description: "Real-time weather application with location-based forecasts and weather alerts.",
+            title: "Smart Home IoT Control Hub",
+            description: "Centralized dashboard for managing smart home devices with automation rules and energy monitoring capabilities.",
             difficulty: difficulty,
-            tags: ["JavaScript", "API Integration", "Geolocation"],
-            category: "Web Development",
-            api_source: selectedApi
+            tags: ["React Native", "IoT", "Node.js", "WebSocket", "SQLite"],
+            category: "Mobile Development",
+            api_source: selectedApi,
+            estimated_time: "4-6 weeks",
+            market_demand: "High"
           },
           {
             user_id: user.id,
-            title: "Task Management System",
-            description: "Collaborative task management with team features, deadlines, and progress tracking.",
+            title: "Real-time Collaborative Code Editor",
+            description: "Online code editor with real-time collaboration, syntax highlighting, and integrated version control features.",
             difficulty: difficulty,
-            tags: ["CRUD Operations", "Database", "User Authentication"],
-            category: "Full Stack",
-            api_source: selectedApi
-          }
+            tags: ["WebSocket", "React", "Monaco Editor", "Git", "Docker"],
+            category: "Web Development",
+            api_source: selectedApi,
+            estimated_time: "5-7 weeks",
+            market_demand: "Medium"
+          },
+          // ... add 12 more diverse projects here
         ];
 
         const { data: fallbackInserted } = await supabase
