@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,14 +18,17 @@ import {
   Save
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Settings = () => {
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState({
     // Profile Settings
-    firstName: "Swati",
-    lastName: "Sharma",
-    email: "swati.sharma@example.com",
-    bio: "Computer Science Student passionate about AI and web development",
+    firstName: "",
+    lastName: "",
+    email: "",
+    bio: "",
     
     // Preferences
     preferredAPI: "openai",
@@ -48,11 +51,80 @@ const Settings = () => {
     compactMode: false
   });
 
-  const handleSave = () => {
-    toast({
-      title: "Settings Saved",
-      description: "Your preferences have been updated successfully.",
-    });
+  useEffect(() => {
+    const getUser = async () => {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        
+        if (error) {
+          toast({
+            title: "Error",
+            description: "Failed to load user information",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (user) {
+          setUser(user);
+          
+          // Extract name from user metadata or email
+          const fullName = user.user_metadata?.full_name || user.user_metadata?.name || "";
+          const nameParts = fullName.split(" ");
+          
+          setSettings(prev => ({
+            ...prev,
+            firstName: nameParts[0] || "",
+            lastName: nameParts.slice(1).join(" ") || "",
+            email: user.email || "",
+            bio: user.user_metadata?.bio || "",
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load user information",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getUser();
+  }, []);
+
+  const handleSave = async () => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          full_name: `${settings.firstName} ${settings.lastName}`.trim(),
+          bio: settings.bio,
+        }
+      });
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to save settings",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Settings Saved",
+        description: "Your preferences have been updated successfully.",
+      });
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save settings",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleExportData = () => {
@@ -69,6 +141,18 @@ const Settings = () => {
       variant: "destructive"
     });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F9FBFD] via-[#FFFFFF] to-[#F0F8FF] p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-lg text-[#616161]">Loading user settings...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F9FBFD] via-[#FFFFFF] to-[#F0F8FF] p-6">
@@ -121,9 +205,10 @@ const Settings = () => {
                   id="email"
                   type="email"
                   value={settings.email}
-                  onChange={(e) => setSettings(prev => ({ ...prev, email: e.target.value }))}
-                  className="border-[#E0E0E0] focus:border-[#4FC3F7]"
+                  disabled
+                  className="border-[#E0E0E0] bg-gray-50 cursor-not-allowed"
                 />
+                <p className="text-sm text-[#616161] mt-1">Email cannot be changed from settings</p>
               </div>
               <div>
                 <Label htmlFor="bio" className="text-[#212121] font-medium">Bio</Label>
@@ -132,6 +217,7 @@ const Settings = () => {
                   value={settings.bio}
                   onChange={(e) => setSettings(prev => ({ ...prev, bio: e.target.value }))}
                   className="border-[#E0E0E0] focus:border-[#4FC3F7]"
+                  placeholder="Tell us about yourself..."
                 />
               </div>
             </CardContent>
