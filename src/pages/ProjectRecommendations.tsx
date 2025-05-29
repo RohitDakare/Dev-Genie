@@ -22,12 +22,13 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ProjectDetails } from "@/components/ProjectDetails";
+import { ResearchPaper } from "@/components/ResearchPaper";
 
 interface Project {
   id: string;
   title: string;
   description: string;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+  difficulty: string; // Changed from union type to string
   tags: string[];
   category: string;
   user_id: string;
@@ -35,6 +36,20 @@ interface Project {
   created_at: string;
   estimated_time?: string;
   market_demand?: string;
+}
+
+interface ProjectDetail {
+  id: string;
+  title: string;
+  description: string;
+  structure: string;
+  flow: string;
+  roadmap: string;
+  pseudoCode: string;
+  resources: string[];
+  githubLinks: string[];
+  project_id: string;
+  created_at: string;
 }
 
 const ProjectRecommendations = () => {
@@ -48,7 +63,8 @@ const ProjectRecommendations = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [projectDetails, setProjectDetails] = useState<any>(null);
+  const [projectDetails, setProjectDetails] = useState<ProjectDetail | null>(null);
+  const [showResearchPaper, setShowResearchPaper] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const skillsOptions = ["JavaScript", "Python", "React", "Node.js", "Java", "C++", "SQL"];
@@ -108,6 +124,7 @@ const ProjectRecommendations = () => {
 
   const handleViewDetails = async (project: Project) => {
     setSelectedProject(project);
+    setShowResearchPaper(false);
     setLoading(true);
     
     try {
@@ -145,45 +162,43 @@ const ProjectRecommendations = () => {
     }
   };
 
-  const handleGenerateDocumentation = async (project: Project) => {
+  const handleGenerateResearchPaper = async (project: Project) => {
+    setSelectedProject(project);
+    setShowResearchPaper(true);
+    setLoading(true);
+    
     try {
-      const { data, error } = await supabase.functions.invoke('generate-documentation', {
-        body: {
-          projectTitle: project.title,
-          projectDescription: project.description,
-          requirements: "Standard project requirements",
-          features: project.tags.join(", "),
-          techStack: project.tags.join(", "),
-          documentType: "srs"
-        }
+      const { data, error } = await supabase.functions.invoke('project-details', {
+        body: { project: project }
       });
 
       if (error) throw error;
 
-      if (data?.documentation) {
-        // Create and download the document
-        const blob = new Blob([data.documentation], { type: 'text/markdown' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${project.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_research_paper.md`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        toast({
-          title: "Documentation Generated!",
-          description: "Research paper has been downloaded",
-        });
+      if (data?.details) {
+        const transformedDetails = {
+          id: data.details.id,
+          title: project.title,
+          description: project.description,
+          structure: data.details.structure || '',
+          flow: data.details.flow || '',
+          roadmap: data.details.roadmap || '',
+          pseudoCode: data.details.pseudo_code || '',
+          resources: data.details.resources || [],
+          githubLinks: data.details.github_links || [],
+          project_id: data.details.project_id,
+          created_at: data.details.created_at
+        };
+        setProjectDetails(transformedDetails);
       }
     } catch (error) {
-      console.error('Error generating documentation:', error);
+      console.error('Error fetching project details:', error);
       toast({
         title: "Error",
-        description: "Failed to generate documentation",
+        description: "Failed to load project details",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -248,7 +263,8 @@ const ProjectRecommendations = () => {
     return colors[category as keyof typeof colors] || "bg-gray-100";
   };
 
-  if (selectedProject && projectDetails) {
+  // Show project details page
+  if (selectedProject && projectDetails && !showResearchPaper) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#F9FBFD] via-[#FFFFFF] to-[#F0F8FF] p-6">
         <div className="max-w-6xl mx-auto">
@@ -265,6 +281,30 @@ const ProjectRecommendations = () => {
             <h1 className="text-3xl font-bold text-[#212121]">Project Details</h1>
           </div>
           <ProjectDetails details={projectDetails} />
+        </div>
+      </div>
+    );
+  }
+
+  // Show research paper page
+  if (selectedProject && projectDetails && showResearchPaper) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F9FBFD] via-[#FFFFFF] to-[#F0F8FF] p-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center space-x-4 mb-6">
+            <Button 
+              onClick={() => {
+                setSelectedProject(null);
+                setProjectDetails(null);
+                setShowResearchPaper(false);
+              }}
+              variant="outline"
+            >
+              ← Back to Projects
+            </Button>
+            <h1 className="text-3xl font-bold text-[#212121]">Research Paper</h1>
+          </div>
+          <ResearchPaper project={selectedProject} details={projectDetails} />
         </div>
       </div>
     );
@@ -434,7 +474,7 @@ const ProjectRecommendations = () => {
                               View Details
                             </Button>
                             <Button 
-                              onClick={() => handleGenerateDocumentation(project)}
+                              onClick={() => handleGenerateResearchPaper(project)}
                               variant="outline" 
                               className="border-[#90CAF9] text-[#4FC3F7] hover:bg-[#E3F2FD]"
                             >
