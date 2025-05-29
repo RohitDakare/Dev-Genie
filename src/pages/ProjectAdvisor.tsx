@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Sparkles, Code, BookOpen } from "lucide-react";
+import { Sparkles, Code, BookOpen, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ProjectCard } from "@/components/ProjectCard";
 import { ProjectDetails } from "@/components/ProjectDetails";
@@ -22,6 +23,8 @@ interface Project {
   user_id: string;
   api_source: string;
   created_at: string;
+  estimated_time?: string;
+  market_demand?: string;
 }
 
 // Fixed interface to match what's expected by the components
@@ -51,6 +54,7 @@ const ProjectAdvisor = () => {
   const [projectDetails, setProjectDetails] = useState<ProjectDetail | null>(null);
   const [showResearchPaper, setShowResearchPaper] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -58,10 +62,12 @@ const ProjectAdvisor = () => {
       ...prev,
       [name]: value
     }));
+    setError(null); // Clear error when user starts typing
   };
 
   const generateProjects = async () => {
     if (!formData.projectType || !formData.interests || !formData.skills) {
+      setError("Please fill in all required fields to generate project suggestions.");
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields to generate project suggestions.",
@@ -71,8 +77,12 @@ const ProjectAdvisor = () => {
     }
 
     setLoading(true);
+    setError(null);
+    
     try {
-      const { data, error } = await supabase.functions.invoke('generate-projects', {
+      console.log('Generating projects with data:', formData);
+      
+      const { data, error: functionError } = await supabase.functions.invoke('generate-projects', {
         body: {
           projectType: formData.projectType,
           interests: formData.interests,
@@ -81,20 +91,29 @@ const ProjectAdvisor = () => {
         }
       });
 
-      if (error) throw error;
+      console.log('Function response:', data, functionError);
 
-      if (data?.projects) {
+      if (functionError) {
+        console.error('Function error:', functionError);
+        throw new Error(functionError.message || 'Failed to generate projects');
+      }
+
+      if (data?.projects && Array.isArray(data.projects)) {
         setProjects(data.projects);
         toast({
           title: "Projects Generated!",
-          description: "Here are your personalized project suggestions from multiple AI models.",
+          description: `Generated ${data.projects.length} personalized project suggestions from multiple AI models.`,
         });
+      } else {
+        throw new Error('No projects received from the API');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating projects:', error);
+      const errorMessage = error?.message || 'Failed to generate projects. Please try again.';
+      setError(errorMessage);
       toast({
         title: "Error",
-        description: "Failed to generate projects. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -264,6 +283,13 @@ const ProjectAdvisor = () => {
                   </RadioGroup>
                 </div>
 
+                {error && (
+                  <div className="bg-red-50 p-3 rounded-lg border border-red-200 flex items-center space-x-2">
+                    <AlertCircle className="w-4 h-4 text-red-500" />
+                    <p className="text-sm text-red-700">{error}</p>
+                  </div>
+                )}
+
                 <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                   <p className="text-sm text-blue-700">
                     <span className="font-semibold">🤖 Multi-AI Generation:</span> We use OpenAI, Claude, and Gemini simultaneously to provide diverse and comprehensive project suggestions.
@@ -285,7 +311,9 @@ const ProjectAdvisor = () => {
           <div className="space-y-6">
             {projects.length > 0 && (
               <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-[#212121] mb-4">Suggested Projects</h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-[#212121] mb-4">
+                  Suggested Projects ({projects.length})
+                </h2>
                 <div className="space-y-4 max-h-[600px] overflow-y-auto">
                   {projects.map((project) => (
                     <ProjectCard 
@@ -298,7 +326,7 @@ const ProjectAdvisor = () => {
               </div>
             )}
 
-            {projects.length === 0 && !loading && (
+            {projects.length === 0 && !loading && !error && (
               <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
                 <CardContent className="text-center py-8 sm:py-12">
                   <Sparkles className="w-12 sm:w-16 h-12 sm:h-16 text-[#90CAF9] mx-auto mb-4" />
@@ -313,7 +341,7 @@ const ProjectAdvisor = () => {
                 <CardContent className="text-center py-8 sm:py-12">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4FC3F7] mx-auto mb-4"></div>
                   <h3 className="text-lg sm:text-xl font-semibold text-[#212121] mb-2">Generating Projects...</h3>
-                  <p className="text-[#616161] px-4">Please wait while we create personalized project suggestions for you.</p>
+                  <p className="text-[#616161] px-4">Please wait while we create personalized project suggestions for you using multiple AI models.</p>
                 </CardContent>
               </Card>
             )}

@@ -38,7 +38,7 @@ serve(async (req) => {
 
     console.log('Generating projects for user:', user.id);
 
-    // Save/update user preferences
+    // Save/update user preferences with fixed preferred_api value
     const { error: prefsError } = await supabase
       .from('user_preferences')
       .upsert({
@@ -47,7 +47,7 @@ serve(async (req) => {
         interests: interests,
         skills: skills,
         difficulty: difficulty,
-        preferred_api: 'all',
+        preferred_api: 'openai', // Fixed to use a valid value
         updated_at: new Date().toISOString()
       });
 
@@ -55,7 +55,7 @@ serve(async (req) => {
       console.error('Error saving preferences:', prefsError);
     }
 
-    const basePrompt = `Generate 5-7 unique and diverse project ideas based on these preferences:
+    const basePrompt = `Generate 15-20 unique and diverse project ideas based on these preferences:
     Project Type: ${projectType}
     Interests: ${interests}
     Skills: ${skills}
@@ -68,15 +68,17 @@ serve(async (req) => {
     - Include both trending and evergreen concepts
     - Cover different aspects of ${projectType} development
     
-    Return a JSON array with objects containing: 
-    - id (unique identifier)
+    Return ONLY a valid JSON array with objects containing: 
+    - id (unique identifier as string)
     - title (clear, descriptive name)
     - description (detailed 2-3 sentence explanation)
-    - difficulty (must be one of: Beginner, Intermediate, Advanced)
+    - difficulty (must be one of: "Beginner", "Intermediate", "Advanced")
     - tags (array of 3-5 relevant technology tags)
     - category (specific category like "Web Development", "Mobile App", "AI/ML", etc.)
     - estimatedTime (like "2-3 weeks", "1 month", etc.)
-    - marketDemand (High, Medium, Low)`;
+    - marketDemand ("High", "Medium", "Low")
+    
+    Make sure the response is valid JSON format only, no extra text or markdown.`;
 
     // Call all three APIs simultaneously
     const apiCalls = [];
@@ -102,7 +104,10 @@ serve(async (req) => {
             return { source: 'openai', content: data.choices[0].message.content };
           }
           return null;
-        }).catch(() => null)
+        }).catch((error) => {
+          console.error('OpenAI API error:', error);
+          return null;
+        })
       );
     }
 
@@ -128,7 +133,10 @@ serve(async (req) => {
             return { source: 'claude', content: data.content[0].text };
           }
           return null;
-        }).catch(() => null)
+        }).catch((error) => {
+          console.error('Claude API error:', error);
+          return null;
+        })
       );
     }
 
@@ -156,7 +164,10 @@ serve(async (req) => {
             return { source: 'gemini', content: data.candidates[0].content.parts[0].text };
           }
           return null;
-        }).catch(() => null)
+        }).catch((error) => {
+          console.error('Gemini API error:', error);
+          return null;
+        })
       );
     }
 
@@ -166,24 +177,44 @@ serve(async (req) => {
 
     let allProjects = [];
 
-    // Parse responses from all APIs
+    // Parse responses from all APIs with improved error handling
     for (const response of validResponses) {
       if (response?.content) {
         try {
-          const jsonMatch = response.content.match(/\[[\s\S]*\]/);
-          const cleanContent = jsonMatch ? jsonMatch[0] : response.content;
+          // Clean the content first
+          let cleanContent = response.content.trim();
+          
+          // Remove markdown code blocks if present
+          cleanContent = cleanContent.replace(/```json\s*|\s*```/g, '');
+          cleanContent = cleanContent.replace(/```\s*|\s*```/g, '');
+          
+          // Try to extract JSON array
+          const jsonMatch = cleanContent.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            cleanContent = jsonMatch[0];
+          }
+          
           const projects = JSON.parse(cleanContent);
           
-          // Add source information and ensure unique IDs
-          const projectsWithSource = projects.map((project: any, index: number) => ({
-            ...project,
-            id: `${response.source}-${Date.now()}-${index}`,
-            api_source: response.source
-          }));
-          
-          allProjects.push(...projectsWithSource);
+          if (Array.isArray(projects)) {
+            // Add source information and ensure unique IDs
+            const projectsWithSource = projects.map((project: any, index: number) => ({
+              ...project,
+              id: `${response.source}-${Date.now()}-${index}`,
+              api_source: response.source,
+              // Ensure all required fields have valid values
+              difficulty: project.difficulty || difficulty,
+              estimatedTime: project.estimatedTime || '2-4 weeks',
+              marketDemand: project.marketDemand || 'Medium',
+              tags: Array.isArray(project.tags) ? project.tags : [],
+              category: project.category || projectType
+            }));
+            
+            allProjects.push(...projectsWithSource);
+          }
         } catch (parseError) {
           console.error(`Error parsing ${response.source} response:`, parseError);
+          console.error('Raw content:', response.content);
         }
       }
     }
@@ -232,12 +263,12 @@ serve(async (req) => {
       });
     }
 
-    // Fallback projects if no API responses
+    // Enhanced fallback projects if no API responses
     const fallbackProjects = [
       {
         user_id: user.id,
         title: "AI-Powered Personal Finance Assistant",
-        description: "A comprehensive financial management platform with AI-driven insights, expense categorization, and investment recommendations.",
+        description: "Build a comprehensive financial management platform with AI-driven insights, expense categorization, and investment recommendations using machine learning algorithms.",
         difficulty: difficulty,
         tags: ["React", "Node.js", "AI/ML", "Chart.js", "MongoDB"],
         category: "Web Development",
@@ -248,7 +279,7 @@ serve(async (req) => {
       {
         user_id: user.id,
         title: "Smart Home IoT Control Hub",
-        description: "Centralized dashboard for managing smart home devices with automation rules and energy monitoring capabilities.",
+        description: "Create a centralized dashboard for managing smart home devices with automation rules, energy monitoring, and voice control integration.",
         difficulty: difficulty,
         tags: ["React Native", "IoT", "Node.js", "WebSocket", "SQLite"],
         category: "Mobile Development",
@@ -259,20 +290,49 @@ serve(async (req) => {
       {
         user_id: user.id,
         title: "Real-time Collaborative Code Editor",
-        description: "Online code editor with real-time collaboration, syntax highlighting, and integrated version control features.",
+        description: "Develop an online code editor with real-time collaboration, syntax highlighting, integrated version control, and live code execution features.",
         difficulty: difficulty,
         tags: ["WebSocket", "React", "Monaco Editor", "Git", "Docker"],
         category: "Web Development",
         api_source: "fallback",
         estimated_time: "5-7 weeks",
         market_demand: "Medium"
+      },
+      {
+        user_id: user.id,
+        title: "E-learning Platform with Gamification",
+        description: "Build an interactive learning platform with gamified elements, progress tracking, and personalized learning paths based on user performance.",
+        difficulty: difficulty,
+        tags: ["React", "Express", "PostgreSQL", "WebRTC", "AWS"],
+        category: "Web Development",
+        api_source: "fallback",
+        estimated_time: "6-8 weeks",
+        market_demand: "High"
+      },
+      {
+        user_id: user.id,
+        title: "Blockchain-based Voting System",
+        description: "Create a secure and transparent voting system using blockchain technology with voter verification and real-time result tracking.",
+        difficulty: difficulty,
+        tags: ["Blockchain", "Solidity", "Web3", "React", "Ethereum"],
+        category: "Blockchain",
+        api_source: "fallback",
+        estimated_time: "8-10 weeks",
+        market_demand: "Medium"
       }
     ];
 
-    const { data: fallbackInserted } = await supabase
+    const { data: fallbackInserted, error: fallbackError } = await supabase
       .from('projects')
       .insert(fallbackProjects)
       .select();
+
+    if (fallbackError) {
+      console.error('Error inserting fallback projects:', fallbackError);
+      throw fallbackError;
+    }
+
+    console.log('Used fallback projects:', fallbackInserted?.length);
 
     return new Response(JSON.stringify({ projects: fallbackInserted }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
