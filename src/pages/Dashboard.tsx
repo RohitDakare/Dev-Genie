@@ -22,6 +22,12 @@ const Dashboard = () => {
   const [user, setUser] = useState<any>(null);
   const [recentProjects, setRecentProjects] = useState([]);
   const [savedProjects, setSavedProjects] = useState([]);
+  const [stats, setStats] = useState({
+    generatedProjects: 0,
+    savedProjectsCount: 0,
+    learningProgress: 75,
+    timeSaved: 0
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,17 +42,29 @@ const Dashboard = () => {
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
-          .limit(3);
+          .limit(5);
         
         setRecentProjects(projects || []);
         
-        // Fetch saved projects count
+        // Fetch saved projects
         const { data: saved } = await supabase
           .from('saved_projects')
           .select('*')
           .eq('user_id', user.id);
         
         setSavedProjects(saved || []);
+        
+        // Calculate stats
+        const totalProjects = projects?.length || 0;
+        const savedCount = saved?.length || 0;
+        const timeSaved = Math.round(totalProjects * 2.5); // Estimate 2.5 hours saved per project
+        
+        setStats({
+          generatedProjects: totalProjects,
+          savedProjectsCount: savedCount,
+          learningProgress: Math.min(75 + (totalProjects * 5), 100), // Progress based on activity
+          timeSaved: timeSaved
+        });
       }
       setLoading(false);
     };
@@ -85,28 +103,28 @@ const Dashboard = () => {
     }
   ];
 
-  const stats = [
+  const statsDisplay = [
     {
       title: "Generated Projects",
-      value: recentProjects.length,
+      value: stats.generatedProjects,
       icon: Target,
       color: "text-[#4FC3F7]"
     },
     {
       title: "Saved Projects",
-      value: savedProjects.length,
+      value: stats.savedProjectsCount,
       icon: Star,
       color: "text-[#FFB74D]"
     },
     {
       title: "Learning Progress",
-      value: "75%",
+      value: `${stats.learningProgress}%`,
       icon: TrendingUp,
       color: "text-[#81C784]"
     },
     {
       title: "Time Saved",
-      value: "24h",
+      value: `${stats.timeSaved}h`,
       icon: Clock,
       color: "text-[#BA68C8]"
     }
@@ -140,7 +158,7 @@ const Dashboard = () => {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
+          {statsDisplay.map((stat, index) => (
             <Card key={index} className="border-[#E0E0E0] shadow-lg hover:shadow-xl transition-all duration-300">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -217,7 +235,9 @@ const Dashboard = () => {
                             </Badge>
                           </div>
                         </div>
-                        <Button variant="outline" size="sm">View</Button>
+                        <Link to="/project-recommendations">
+                          <Button variant="outline" size="sm">View</Button>
+                        </Link>
                       </div>
                     ))}
                   </div>
@@ -248,22 +268,25 @@ const Dashboard = () => {
                   <div>
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-[#616161]">Projects Generated</span>
-                      <span className="text-[#212121]">{recentProjects.length}/10</span>
+                      <span className="text-[#212121]">{stats.generatedProjects}/20</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div 
                         className="bg-[#4FC3F7] h-2 rounded-full transition-all duration-300" 
-                        style={{ width: `${Math.min((recentProjects.length / 10) * 100, 100)}%` }}
+                        style={{ width: `${Math.min((stats.generatedProjects / 20) * 100, 100)}%` }}
                       ></div>
                     </div>
                   </div>
                   <div>
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-[#616161]">Learning Path</span>
-                      <span className="text-[#212121]">75%</span>
+                      <span className="text-[#212121]">{stats.learningProgress}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-[#81C784] h-2 rounded-full w-3/4 transition-all duration-300"></div>
+                      <div 
+                        className="bg-[#81C784] h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${stats.learningProgress}%` }}
+                      ></div>
                     </div>
                   </div>
                 </div>
@@ -277,7 +300,12 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-[#616161] text-sm leading-relaxed">
-                  Start with beginner projects and gradually increase difficulty. This helps build confidence and ensures steady progress in your learning journey.
+                  {stats.generatedProjects === 0 
+                    ? "Start with beginner projects and gradually increase difficulty. This helps build confidence and ensures steady progress."
+                    : stats.generatedProjects < 5 
+                    ? "Great start! Try exploring different categories to diversify your skill set."
+                    : "You're making excellent progress! Consider documenting your projects to build a strong portfolio."
+                  }
                 </p>
               </CardContent>
             </Card>

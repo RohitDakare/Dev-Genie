@@ -60,7 +60,9 @@ export type Database = {
           created_at: string
           description: string
           difficulty: string | null
+          estimated_time: string | null
           id: string
+          market_demand: string | null
           tags: string[] | null
           title: string
           user_id: string
@@ -71,7 +73,9 @@ export type Database = {
           created_at?: string
           description: string
           difficulty?: string | null
+          estimated_time?: string | null
           id?: string
+          market_demand?: string | null
           tags?: string[] | null
           title: string
           user_id: string
@@ -82,7 +86,9 @@ export type Database = {
           created_at?: string
           description?: string
           difficulty?: string | null
+          estimated_time?: string | null
           id?: string
+          market_demand?: string | null
           tags?: string[] | null
           title?: string
           user_id?: string
