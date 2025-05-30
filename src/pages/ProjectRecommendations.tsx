@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +27,7 @@ interface Project {
   id: string;
   title: string;
   description: string;
-  difficulty: string; // Changed from union type to string
+  difficulty: string;
   tags: string[];
   category: string;
   user_id: string;
