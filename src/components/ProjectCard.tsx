@@ -8,12 +8,14 @@ interface Project {
   id: string;
   title: string;
   description: string;
-  difficulty: string; // Changed from union type to string
+  difficulty: string;
   tags: string[];
   category: string;
   user_id: string;
   api_source: string;
   created_at: string;
+  estimated_time?: string;
+  market_demand?: string;
 }
 
 interface ProjectCardProps {
@@ -79,12 +81,12 @@ export const ProjectCard = ({ project, onSelect }: ProjectCardProps) => {
             <div className="flex items-center space-x-4 text-sm text-[#616161]">
               <div className="flex items-center space-x-1">
                 <Clock className="w-4 h-4" />
-                <span>{new Date(project.created_at).toLocaleDateString()}</span>
+                <span>{project.estimated_time || new Date(project.created_at).toLocaleDateString()}</span>
               </div>
               {project.api_source && (
                 <div className="flex items-center space-x-1">
                   <Star className="w-4 h-4" />
-                  <span className="capitalize">{project.api_source}</span>
+                  <span className="capitalize">{project.market_demand || project.api_source}</span>
                 </div>
               )}
             </div>
