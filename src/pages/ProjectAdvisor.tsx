@@ -17,7 +17,7 @@ interface Project {
   id: string;
   title: string;
   description: string;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+  difficulty: string;
   tags: string[];
   category: string;
   user_id: string;
@@ -27,7 +27,6 @@ interface Project {
   market_demand?: string;
 }
 
-// Fixed interface to match what's expected by the components
 interface ProjectDetail {
   id: string;
   title: string;
@@ -42,6 +41,114 @@ interface ProjectDetail {
   created_at: string;
 }
 
+// Mock data for demonstration
+const mockProjects: Project[] = [
+  {
+    id: '1',
+    title: 'E-Commerce Fashion Store',
+    description: 'Build a modern online fashion store with shopping cart, payment integration, user authentication, and inventory management. Features include product search, filtering, wishlists, and order tracking.',
+    difficulty: 'Intermediate',
+    tags: ['React', 'Node.js', 'Stripe', 'MongoDB', 'Redux'],
+    category: 'Web Development',
+    user_id: 'mock-user',
+    api_source: 'openai',
+    created_at: new Date().toISOString(),
+    estimated_time: '4-6 weeks',
+    market_demand: 'High'
+  },
+  {
+    id: '2',
+    title: 'Fitness Tracker Mobile App',
+    description: 'Develop a comprehensive fitness tracking mobile app with workout logging, progress tracking, social features, and wearable device integration.',
+    difficulty: 'Intermediate',
+    tags: ['React Native', 'Firebase', 'HealthKit', 'Redux'],
+    category: 'Mobile Development',
+    user_id: 'mock-user',
+    api_source: 'claude',
+    created_at: new Date().toISOString(),
+    estimated_time: '6-8 weeks',
+    market_demand: 'High'
+  },
+  {
+    id: '3',
+    title: 'Customer Sentiment Analysis',
+    description: 'Build an AI system that analyzes customer feedback and reviews to determine sentiment, extract insights, and provide actionable recommendations for business improvement.',
+    difficulty: 'Advanced',
+    tags: ['Python', 'TensorFlow', 'NLTK', 'Pandas', 'Flask'],
+    category: 'AI/ML',
+    user_id: 'mock-user',
+    api_source: 'claude',
+    created_at: new Date().toISOString(),
+    estimated_time: '8-10 weeks',
+    market_demand: 'High'
+  },
+  {
+    id: '4',
+    title: '2D Platformer Adventure Game',
+    description: 'Create a 2D side-scrolling platformer with multiple levels, power-ups, enemies, boss battles, and a compelling storyline.',
+    difficulty: 'Intermediate',
+    tags: ['Unity', 'C#', 'Sprite Animation', 'Physics2D'],
+    category: 'Game Development',
+    user_id: 'mock-user',
+    api_source: 'gemini',
+    created_at: new Date().toISOString(),
+    estimated_time: '8-10 weeks',
+    market_demand: 'Medium'
+  },
+  {
+    id: '5',
+    title: 'Smart Home Automation Hub',
+    description: 'Develop a comprehensive smart home system that controls lights, temperature, security, and appliances through a central hub with mobile app integration.',
+    difficulty: 'Advanced',
+    tags: ['Arduino', 'Raspberry Pi', 'Node.js', 'MQTT', 'Mobile App'],
+    category: 'IoT',
+    user_id: 'mock-user',
+    api_source: 'gemini',
+    created_at: new Date().toISOString(),
+    estimated_time: '10-12 weeks',
+    market_demand: 'High'
+  },
+  {
+    id: '6',
+    title: 'NFT Marketplace',
+    description: 'Create a comprehensive NFT marketplace with minting, trading, auctions, royalty management, and creator profiles.',
+    difficulty: 'Advanced',
+    tags: ['Solidity', 'OpenZeppelin', 'IPFS', 'Web3.js', 'MetaMask'],
+    category: 'Blockchain',
+    user_id: 'mock-user',
+    api_source: 'openai',
+    created_at: new Date().toISOString(),
+    estimated_time: '10-12 weeks',
+    market_demand: 'High'
+  },
+  {
+    id: '7',
+    title: 'Task Management App',
+    description: 'Develop a collaborative task management application with drag-and-drop functionality, team collaboration features, deadline tracking, and progress visualization.',
+    difficulty: 'Beginner',
+    tags: ['React', 'Firebase', 'Material-UI', 'JavaScript'],
+    category: 'Web Development',
+    user_id: 'mock-user',
+    api_source: 'gemini',
+    created_at: new Date().toISOString(),
+    estimated_time: '3-4 weeks',
+    market_demand: 'Medium'
+  },
+  {
+    id: '8',
+    title: 'Language Learning App',
+    description: 'Build a language learning mobile app with interactive lessons, speech recognition, progress tracking, and gamification elements.',
+    difficulty: 'Intermediate',
+    tags: ['React Native', 'Firebase', 'Speech API', 'SQLite'],
+    category: 'Mobile Development',
+    user_id: 'mock-user',
+    api_source: 'openai',
+    created_at: new Date().toISOString(),
+    estimated_time: '7-9 weeks',
+    market_demand: 'Medium'
+  }
+];
+
 const ProjectAdvisor = () => {
   const [formData, setFormData] = useState({
     projectType: "",
@@ -49,12 +156,13 @@ const ProjectAdvisor = () => {
     skills: "",
     difficulty: "Beginner"
   });
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<Project[]>(mockProjects);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [projectDetails, setProjectDetails] = useState<ProjectDetail | null>(null);
   const [showResearchPaper, setShowResearchPaper] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showMockData, setShowMockData] = useState(true);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -62,7 +170,7 @@ const ProjectAdvisor = () => {
       ...prev,
       [name]: value
     }));
-    setError(null); // Clear error when user starts typing
+    setError(null);
   };
 
   const generateProjects = async () => {
@@ -78,6 +186,7 @@ const ProjectAdvisor = () => {
 
     setLoading(true);
     setError(null);
+    setShowMockData(false);
     
     try {
       console.log('Generating projects with data:', formData);
@@ -111,6 +220,7 @@ const ProjectAdvisor = () => {
       console.error('Error generating projects:', error);
       const errorMessage = error?.message || 'Failed to generate projects. Please try again.';
       setError(errorMessage);
+      setShowMockData(true);
       toast({
         title: "Error",
         description: errorMessage,
@@ -126,6 +236,36 @@ const ProjectAdvisor = () => {
     setLoading(true);
     
     try {
+      // For mock data, create mock project details
+      if (showMockData || project.user_id === 'mock-user') {
+        const mockDetails: ProjectDetail = {
+          id: 'mock-detail-' + project.id,
+          title: project.title,
+          description: project.description,
+          structure: `Project Structure for ${project.title}:\n\n1. Frontend Components\n2. Backend Services\n3. Database Schema\n4. API Endpoints\n5. Testing Suite`,
+          flow: `Development Flow:\n\n1. Setup development environment\n2. Create project structure\n3. Implement core features\n4. Add advanced functionality\n5. Testing and deployment`,
+          roadmap: `Development Roadmap:\n\nWeek 1-2: Setup & Planning\nWeek 3-4: Core Development\nWeek 5-6: Feature Implementation\nWeek 7-8: Testing & Polish`,
+          pseudoCode: `// Main application logic\nfunction main() {\n  // Initialize application\n  setupEnvironment();\n  \n  // Load core modules\n  loadModules();\n  \n  // Start application\n  startApp();\n}`,
+          resources: [
+            'Official Documentation',
+            'GitHub Repositories',
+            'Online Tutorials',
+            'Community Forums',
+            'Best Practices Guide'
+          ],
+          githubLinks: [
+            'https://github.com/example/starter-template',
+            'https://github.com/example/similar-project',
+            'https://github.com/example/component-library'
+          ],
+          project_id: project.id,
+          created_at: new Date().toISOString()
+        };
+        setProjectDetails(mockDetails);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('project-details', {
         body: {
           project: project
@@ -135,7 +275,6 @@ const ProjectAdvisor = () => {
       if (error) throw error;
 
       if (data?.details) {
-        // Transform the database response to match our interface
         const transformedDetails: ProjectDetail = {
           id: data.details.id,
           title: project.title,
@@ -304,6 +443,14 @@ const ProjectAdvisor = () => {
                   {loading ? "Generating from Multiple AIs..." : "Generate Project Ideas"}
                   <Sparkles className="w-4 h-4 ml-2" />
                 </Button>
+
+                {showMockData && (
+                  <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                    <p className="text-sm text-yellow-700">
+                      <span className="font-semibold">📝 Demo Mode:</span> Currently showing sample projects. Fill out the form to generate personalized suggestions.
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -312,7 +459,7 @@ const ProjectAdvisor = () => {
             {projects.length > 0 && (
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold text-[#212121] mb-4">
-                  Suggested Projects ({projects.length})
+                  {showMockData ? 'Sample Projects' : 'Suggested Projects'} ({projects.length})
                 </h2>
                 <div className="space-y-4 max-h-[600px] overflow-y-auto">
                   {projects.map((project) => (
@@ -324,16 +471,6 @@ const ProjectAdvisor = () => {
                   ))}
                 </div>
               </div>
-            )}
-
-            {projects.length === 0 && !loading && !error && (
-              <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
-                <CardContent className="text-center py-8 sm:py-12">
-                  <Sparkles className="w-12 sm:w-16 h-12 sm:h-16 text-[#90CAF9] mx-auto mb-4" />
-                  <h3 className="text-lg sm:text-xl font-semibold text-[#212121] mb-2">Ready to get started?</h3>
-                  <p className="text-[#616161] px-4">Fill out the form and click "Generate Project Ideas" to see personalized suggestions.</p>
-                </CardContent>
-              </Card>
             )}
 
             {loading && (
