@@ -74,7 +74,7 @@ const Signup = () => {
       if (data.user) {
         toast({
           title: "Account created successfully!",
-          description: "Welcome to Dev Genie! You can now start exploring.",
+          description: "Welcome to Dev Genie! Please verify your email to continue.",
         });
         // Navigation will be handled by AuthGuard
       }
