@@ -17,7 +17,7 @@ interface Project {
   id: string;
   title: string;
   description: string;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+  difficulty: string; // Changed to string to match database
   tags: string[];
   category: string;
   user_id: string;
