@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,114 +41,6 @@ interface ProjectDetail {
   created_at: string;
 }
 
-// Mock data for demonstration
-const mockProjects: Project[] = [
-  {
-    id: '1',
-    title: 'E-Commerce Fashion Store',
-    description: 'Build a modern online fashion store with shopping cart, payment integration, user authentication, and inventory management. Features include product search, filtering, wishlists, and order tracking.',
-    difficulty: 'Intermediate',
-    tags: ['React', 'Node.js', 'Stripe', 'MongoDB', 'Redux'],
-    category: 'Web Development',
-    user_id: 'mock-user',
-    api_source: 'openai',
-    created_at: new Date().toISOString(),
-    estimated_time: '4-6 weeks',
-    market_demand: 'High'
-  },
-  {
-    id: '2',
-    title: 'Fitness Tracker Mobile App',
-    description: 'Develop a comprehensive fitness tracking mobile app with workout logging, progress tracking, social features, and wearable device integration.',
-    difficulty: 'Intermediate',
-    tags: ['React Native', 'Firebase', 'HealthKit', 'Redux'],
-    category: 'Mobile Development',
-    user_id: 'mock-user',
-    api_source: 'claude',
-    created_at: new Date().toISOString(),
-    estimated_time: '6-8 weeks',
-    market_demand: 'High'
-  },
-  {
-    id: '3',
-    title: 'Customer Sentiment Analysis',
-    description: 'Build an AI system that analyzes customer feedback and reviews to determine sentiment, extract insights, and provide actionable recommendations for business improvement.',
-    difficulty: 'Advanced',
-    tags: ['Python', 'TensorFlow', 'NLTK', 'Pandas', 'Flask'],
-    category: 'AI/ML',
-    user_id: 'mock-user',
-    api_source: 'claude',
-    created_at: new Date().toISOString(),
-    estimated_time: '8-10 weeks',
-    market_demand: 'High'
-  },
-  {
-    id: '4',
-    title: '2D Platformer Adventure Game',
-    description: 'Create a 2D side-scrolling platformer with multiple levels, power-ups, enemies, boss battles, and a compelling storyline.',
-    difficulty: 'Intermediate',
-    tags: ['Unity', 'C#', 'Sprite Animation', 'Physics2D'],
-    category: 'Game Development',
-    user_id: 'mock-user',
-    api_source: 'gemini',
-    created_at: new Date().toISOString(),
-    estimated_time: '8-10 weeks',
-    market_demand: 'Medium'
-  },
-  {
-    id: '5',
-    title: 'Smart Home Automation Hub',
-    description: 'Develop a comprehensive smart home system that controls lights, temperature, security, and appliances through a central hub with mobile app integration.',
-    difficulty: 'Advanced',
-    tags: ['Arduino', 'Raspberry Pi', 'Node.js', 'MQTT', 'Mobile App'],
-    category: 'IoT',
-    user_id: 'mock-user',
-    api_source: 'gemini',
-    created_at: new Date().toISOString(),
-    estimated_time: '10-12 weeks',
-    market_demand: 'High'
-  },
-  {
-    id: '6',
-    title: 'NFT Marketplace',
-    description: 'Create a comprehensive NFT marketplace with minting, trading, auctions, royalty management, and creator profiles.',
-    difficulty: 'Advanced',
-    tags: ['Solidity', 'OpenZeppelin', 'IPFS', 'Web3.js', 'MetaMask'],
-    category: 'Blockchain',
-    user_id: 'mock-user',
-    api_source: 'openai',
-    created_at: new Date().toISOString(),
-    estimated_time: '10-12 weeks',
-    market_demand: 'High'
-  },
-  {
-    id: '7',
-    title: 'Task Management App',
-    description: 'Develop a collaborative task management application with drag-and-drop functionality, team collaboration features, deadline tracking, and progress visualization.',
-    difficulty: 'Beginner',
-    tags: ['React', 'Firebase', 'Material-UI', 'JavaScript'],
-    category: 'Web Development',
-    user_id: 'mock-user',
-    api_source: 'gemini',
-    created_at: new Date().toISOString(),
-    estimated_time: '3-4 weeks',
-    market_demand: 'Medium'
-  },
-  {
-    id: '8',
-    title: 'Language Learning App',
-    description: 'Build a language learning mobile app with interactive lessons, speech recognition, progress tracking, and gamification elements.',
-    difficulty: 'Intermediate',
-    tags: ['React Native', 'Firebase', 'Speech API', 'SQLite'],
-    category: 'Mobile Development',
-    user_id: 'mock-user',
-    api_source: 'openai',
-    created_at: new Date().toISOString(),
-    estimated_time: '7-9 weeks',
-    market_demand: 'Medium'
-  }
-];
-
 const ProjectAdvisor = () => {
   const [formData, setFormData] = useState({
     projectType: "",
@@ -156,13 +48,51 @@ const ProjectAdvisor = () => {
     skills: "",
     difficulty: "Beginner"
   });
-  const [projects, setProjects] = useState<Project[]>(mockProjects);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [projectDetails, setProjectDetails] = useState<ProjectDetail | null>(null);
   const [showResearchPaper, setShowResearchPaper] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showMockData, setShowMockData] = useState(true);
+
+  // Fetch all projects from database on component mount
+  useEffect(() => {
+    fetchAllProjects();
+  }, []);
+
+  const fetchAllProjects = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setAllProjects(data);
+        setProjects(data.slice(0, 8)); // Show first 8 projects initially
+        setShowMockData(false);
+      } else {
+        // If no projects in database, show empty state
+        setAllProjects([]);
+        setProjects([]);
+        setShowMockData(false);
+      }
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load projects from database",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -189,38 +119,65 @@ const ProjectAdvisor = () => {
     setShowMockData(false);
     
     try {
-      console.log('Generating projects with data:', formData);
+      console.log('Filtering projects based on preferences:', formData);
       
-      const { data, error: functionError } = await supabase.functions.invoke('generate-projects', {
-        body: {
-          projectType: formData.projectType,
-          interests: formData.interests,
-          skills: formData.skills,
-          difficulty: formData.difficulty
-        }
+      // Filter projects based on user preferences
+      let filteredProjects = allProjects;
+
+      // Filter by difficulty
+      if (formData.difficulty) {
+        filteredProjects = filteredProjects.filter(project => 
+          project.difficulty.toLowerCase() === formData.difficulty.toLowerCase()
+        );
+      }
+
+      // Filter by project type/category
+      if (formData.projectType) {
+        filteredProjects = filteredProjects.filter(project => 
+          project.category.toLowerCase().includes(formData.projectType.toLowerCase()) ||
+          project.title.toLowerCase().includes(formData.projectType.toLowerCase())
+        );
+      }
+
+      // Filter by interests
+      if (formData.interests) {
+        const interests = formData.interests.toLowerCase().split(',').map(i => i.trim());
+        filteredProjects = filteredProjects.filter(project => 
+          interests.some(interest => 
+            project.description.toLowerCase().includes(interest) ||
+            project.category.toLowerCase().includes(interest) ||
+            project.tags.some(tag => tag.toLowerCase().includes(interest))
+          )
+        );
+      }
+
+      // Filter by skills
+      if (formData.skills) {
+        const skills = formData.skills.toLowerCase().split(',').map(s => s.trim());
+        filteredProjects = filteredProjects.filter(project => 
+          skills.some(skill => 
+            project.tags.some(tag => tag.toLowerCase().includes(skill))
+          )
+        );
+      }
+
+      // If no matches found, show similar projects
+      if (filteredProjects.length === 0) {
+        filteredProjects = allProjects.filter(project => 
+          project.difficulty.toLowerCase() === formData.difficulty.toLowerCase()
+        ).slice(0, 5);
+      }
+
+      setProjects(filteredProjects.slice(0, 8));
+      
+      toast({
+        title: "Projects Found!",
+        description: `Found ${filteredProjects.length} projects matching your preferences.`,
       });
-
-      console.log('Function response:', data, functionError);
-
-      if (functionError) {
-        console.error('Function error:', functionError);
-        throw new Error(functionError.message || 'Failed to generate projects');
-      }
-
-      if (data?.projects && Array.isArray(data.projects)) {
-        setProjects(data.projects);
-        toast({
-          title: "Projects Generated!",
-          description: `Generated ${data.projects.length} personalized project suggestions from multiple AI models.`,
-        });
-      } else {
-        throw new Error('No projects received from the API');
-      }
     } catch (error: any) {
-      console.error('Error generating projects:', error);
-      const errorMessage = error?.message || 'Failed to generate projects. Please try again.';
+      console.error('Error filtering projects:', error);
+      const errorMessage = error?.message || 'Failed to filter projects. Please try again.';
       setError(errorMessage);
-      setShowMockData(true);
       toast({
         title: "Error",
         description: errorMessage,
@@ -236,10 +193,21 @@ const ProjectAdvisor = () => {
     setLoading(true);
     
     try {
-      // For mock data, create mock project details
-      if (showMockData || project.user_id === 'mock-user') {
+      console.log('Fetching project details for:', project.id);
+      
+      const { data, error } = await supabase.functions.invoke('project-details', {
+        body: {
+          project: project
+        }
+      });
+
+      console.log('Project details response:', data, error);
+
+      if (error) {
+        console.error('Function error:', error);
+        // Create mock details if API fails
         const mockDetails: ProjectDetail = {
-          id: 'mock-detail-' + project.id,
+          id: 'detail-' + project.id,
           title: project.title,
           description: project.description,
           structure: `Project Structure for ${project.title}:\n\n1. Frontend Components\n2. Backend Services\n3. Database Schema\n4. API Endpoints\n5. Testing Suite`,
@@ -262,19 +230,7 @@ const ProjectAdvisor = () => {
           created_at: new Date().toISOString()
         };
         setProjectDetails(mockDetails);
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase.functions.invoke('project-details', {
-        body: {
-          project: project
-        }
-      });
-
-      if (error) throw error;
-
-      if (data?.details) {
+      } else if (data?.details) {
         const transformedDetails: ProjectDetail = {
           id: data.details.id,
           title: project.title,
@@ -289,12 +245,84 @@ const ProjectAdvisor = () => {
           created_at: data.details.created_at
         };
         setProjectDetails(transformedDetails);
+      } else {
+        throw new Error('No project details received');
       }
     } catch (error) {
       console.error('Error fetching project details:', error);
+      // Create mock details as fallback
+      const mockDetails: ProjectDetail = {
+        id: 'detail-' + project.id,
+        title: project.title,
+        description: project.description,
+        structure: `Project Structure for ${project.title}:\n\n1. Frontend Components\n2. Backend Services\n3. Database Schema\n4. API Endpoints\n5. Testing Suite`,
+        flow: `Development Flow:\n\n1. Setup development environment\n2. Create project structure\n3. Implement core features\n4. Add advanced functionality\n5. Testing and deployment`,
+        roadmap: `Development Roadmap:\n\nWeek 1-2: Setup & Planning\nWeek 3-4: Core Development\nWeek 5-6: Feature Implementation\nWeek 7-8: Testing & Polish`,
+        pseudoCode: `// Main application logic\nfunction main() {\n  // Initialize application\n  setupEnvironment();\n  \n  // Load core modules\n  loadModules();\n  \n  // Start application\n  startApp();\n}`,
+        resources: [
+          'Official Documentation',
+          'GitHub Repositories',
+          'Online Tutorials',
+          'Community Forums',
+          'Best Practices Guide'
+        ],
+        githubLinks: [
+          'https://github.com/example/starter-template',
+          'https://github.com/example/similar-project',
+          'https://github.com/example/component-library'
+        ],
+        project_id: project.id,
+        created_at: new Date().toISOString()
+      };
+      setProjectDetails(mockDetails);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateDocumentation = async (project: Project, details: ProjectDetail) => {
+    setLoading(true);
+    try {
+      console.log('Generating documentation for project:', project.title);
+      
+      const { data, error } = await supabase.functions.invoke('generate-documentation', {
+        body: {
+          projectTitle: project.title,
+          projectDescription: project.description,
+          requirements: details.structure,
+          features: details.flow,
+          techStack: project.tags.join(', '),
+          documentType: 'srs'
+        }
+      });
+
+      if (error) {
+        console.error('Documentation generation error:', error);
+        throw error;
+      }
+
+      if (data?.documentation) {
+        // Create a blob and download the documentation
+        const blob = new Blob([data.documentation], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${project.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_documentation.md`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        toast({
+          title: "Documentation Generated!",
+          description: "Project documentation has been downloaded.",
+        });
+      }
+    } catch (error) {
+      console.error('Error generating documentation:', error);
       toast({
         title: "Error",
-        description: "Failed to load project details. Please try again.",
+        description: "Failed to generate documentation. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -338,6 +366,15 @@ const ProjectAdvisor = () => {
               <BookOpen className="w-4 h-4 mr-2" />
               Research Paper
             </Button>
+            <Button 
+              onClick={() => generateDocumentation(selectedProject, projectDetails)}
+              variant="outline"
+              disabled={loading}
+              className="w-full sm:w-auto"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Generate Documentation
+            </Button>
           </div>
 
           {!showResearchPaper ? (
@@ -358,7 +395,7 @@ const ProjectAdvisor = () => {
             <Sparkles className="w-6 sm:w-8 h-6 sm:h-8 text-[#4FC3F7]" />
             <h1 className="text-3xl sm:text-4xl font-bold text-[#212121]">Project Advisor</h1>
           </div>
-          <p className="text-base sm:text-lg text-[#616161] px-4">Get AI-powered project suggestions from multiple AI models (OpenAI, Claude, Gemini)</p>
+          <p className="text-base sm:text-lg text-[#616161] px-4">Get AI-powered project suggestions from our database of {allProjects.length} projects</p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-8">
@@ -431,7 +468,7 @@ const ProjectAdvisor = () => {
 
                 <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                   <p className="text-sm text-blue-700">
-                    <span className="font-semibold">🤖 Multi-AI Generation:</span> We use OpenAI, Claude, and Gemini simultaneously to provide diverse and comprehensive project suggestions.
+                    <span className="font-semibold">🎯 Smart Matching:</span> We'll find projects from our database that match your preferences and skill level.
                   </p>
                 </div>
 
@@ -440,17 +477,9 @@ const ProjectAdvisor = () => {
                   disabled={loading}
                   className="w-full bg-[#4FC3F7] hover:bg-[#29B6F6] text-white py-3"
                 >
-                  {loading ? "Generating from Multiple AIs..." : "Generate Project Ideas"}
+                  {loading ? "Finding Matching Projects..." : "Find Matching Projects"}
                   <Sparkles className="w-4 h-4 ml-2" />
                 </Button>
-
-                {showMockData && (
-                  <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
-                    <p className="text-sm text-yellow-700">
-                      <span className="font-semibold">📝 Demo Mode:</span> Currently showing sample projects. Fill out the form to generate personalized suggestions.
-                    </p>
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -477,8 +506,18 @@ const ProjectAdvisor = () => {
               <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
                 <CardContent className="text-center py-8 sm:py-12">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4FC3F7] mx-auto mb-4"></div>
-                  <h3 className="text-lg sm:text-xl font-semibold text-[#212121] mb-2">Generating Projects...</h3>
-                  <p className="text-[#616161] px-4">Please wait while we create personalized project suggestions for you using multiple AI models.</p>
+                  <h3 className="text-lg sm:text-xl font-semibold text-[#212121] mb-2">Loading Projects...</h3>
+                  <p className="text-[#616161] px-4">Please wait while we find the best projects for you.</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {!loading && projects.length === 0 && allProjects.length === 0 && (
+              <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
+                <CardContent className="text-center py-8 sm:py-12">
+                  <AlertCircle className="w-12 h-12 text-[#FFE082] mx-auto mb-4" />
+                  <h3 className="text-lg sm:text-xl font-semibold text-[#212121] mb-2">No Projects Found</h3>
+                  <p className="text-[#616161] px-4">No projects are currently available in the database. Please check back later.</p>
                 </CardContent>
               </Card>
             )}
