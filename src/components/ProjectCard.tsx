@@ -8,7 +8,7 @@ interface Project {
   id: string;
   title: string;
   description: string;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+  difficulty: string; // Changed from union type to string
   tags: string[];
   category: string;
   user_id: string;
