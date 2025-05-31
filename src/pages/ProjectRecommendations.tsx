@@ -17,14 +17,16 @@ import {
   Users,
   Code2,
   Bookmark,
-  BookmarkCheck
+  BookmarkCheck,
+  Download,
+  Trash2
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ProjectDetails } from "@/components/ProjectDetails";
 import { ResearchPaper } from "@/components/ResearchPaper";
 
-interface Project {
+interface DatabaseProject {
   id: string;
   title: string;
   description: string;
@@ -60,9 +62,9 @@ const ProjectRecommendations = () => {
     goal: ""
   });
   const [savedProjects, setSavedProjects] = useState<string[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [projects, setProjects] = useState<DatabaseProject[]>([]);
+  const [filteredProjects, setFilteredProjects] = useState<DatabaseProject[]>([]);
+  const [selectedProject, setSelectedProject] = useState<DatabaseProject | null>(null);
   const [projectDetails, setProjectDetails] = useState<ProjectDetail | null>(null);
   const [showResearchPaper, setShowResearchPaper] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -123,7 +125,68 @@ const ProjectRecommendations = () => {
     setFilteredProjects(filtered);
   }, [filters, projects]);
 
-  const handleViewDetails = async (project: Project) => {
+  const handleClearFilters = () => {
+    setFilters({
+      skills: "",
+      experience: "",
+      domain: "",
+      goal: ""
+    });
+    
+    toast({
+      title: "Filters Cleared",
+      description: "All filters have been reset.",
+    });
+  };
+
+  const handleExportData = () => {
+    try {
+      const dataToExport = {
+        projects: filteredProjects,
+        savedProjects,
+        filters,
+        exportDate: new Date().toISOString()
+      };
+      
+      const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `project_recommendations_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Data Exported",
+        description: "Your project recommendations data has been downloaded successfully.",
+      });
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export data. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteFilters = () => {
+    setFilters({
+      skills: "",
+      experience: "",
+      domain: "",
+      goal: ""
+    });
+    
+    toast({
+      title: "Filters Deleted",
+      description: "All filter preferences have been cleared.",
+    });
+  };
+
+  const handleViewDetails = async (project: DatabaseProject) => {
     setSelectedProject(project);
     setShowResearchPaper(false);
     setLoading(true);
@@ -214,12 +277,12 @@ const ProjectRecommendations = () => {
     }
   };
 
-  const handleGenerateResearchPaper = async (project: Project) => {
+  const handleGenerateResearchPaper = async (project: DatabaseProject) => {
     await handleViewDetails(project);
     setShowResearchPaper(true);
   };
 
-  const generateDocumentation = async (project: Project, details: ProjectDetail) => {
+  const generateDocumentation = async (project: DatabaseProject, details: ProjectDetail) => {
     setLoading(true);
     try {
       console.log('Generating documentation for project:', project.title);
@@ -464,13 +527,33 @@ const ProjectRecommendations = () => {
                   </Select>
                 </div>
 
-                <Button 
-                  onClick={() => setFilters({ skills: "", experience: "", domain: "", goal: "" })}
-                  className="w-full bg-[#4FC3F7] hover:bg-[#29B6F6] text-white"
-                >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Clear Filters
-                </Button>
+                <div className="space-y-2">
+                  <Button 
+                    onClick={handleClearFilters}
+                    className="w-full bg-[#4FC3F7] hover:bg-[#29B6F6] text-white"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Clear Filters
+                  </Button>
+                  
+                  <Button 
+                    onClick={handleExportData}
+                    variant="outline"
+                    className="w-full border-[#90CAF9] text-[#4FC3F7] hover:bg-[#E3F2FD]"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export Data
+                  </Button>
+                  
+                  <Button 
+                    onClick={handleDeleteFilters}
+                    variant="outline"
+                    className="w-full border-red-300 text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Filters
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
