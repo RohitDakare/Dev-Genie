@@ -30,7 +30,7 @@ interface DatabaseProject {
   id: string;
   title: string;
   description: string;
-  difficulty: string;
+  difficulty: "Beginner" | "Intermediate" | "Advanced";
   tags: string[];
   category: string;
   user_id: string;
