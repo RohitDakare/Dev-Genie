@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -87,8 +86,13 @@ const ProjectRecommendations = () => {
         if (error) throw error;
         
         console.log('Fetched projects:', data);
-        setProjects(data || []);
-        setFilteredProjects(data || []);
+        // Type assertion to handle the string -> union type conversion
+        const typedProjects = (data || []).map(project => ({
+          ...project,
+          difficulty: project.difficulty as "Beginner" | "Intermediate" | "Advanced"
+        }));
+        setProjects(typedProjects);
+        setFilteredProjects(typedProjects);
       } catch (error) {
         console.error('Error fetching projects:', error);
         toast({
